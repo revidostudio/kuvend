@@ -7,7 +7,7 @@
         "http://127.0.0.1:3000/",
         "http://127.0.0.1:3000/propozime/11111111-1111-4111-8111-111111111111"
       ],
-      "numberOfRuns": 1,
+      "numberOfRuns": 3,
       "settings": {
         "emulatedFormFactor": "mobile",
         "screenEmulation": { "mobile": true, "width": 390, "height": 844, "deviceScaleFactor": 2 }
