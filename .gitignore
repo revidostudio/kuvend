@@ -11,8 +11,16 @@ coverage/
 kuvend-mobile.png
 *.tsbuildinfo
 *.log
+storybook-static/
+playwright-report/
+test-results/
+.lighthouseci/
 
 .env.local
 .pnpm-store/
 
 data/
+
+# Hookify rules are machine-local. The committed deployment contract lives in
+# AGENTS.md and .agents/skills/railway-kuvendi.
+.claude/*.local.md

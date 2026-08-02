@@ -1,28 +1,36 @@
 "use client";
 
 import type { EvidenceItem, ProposalRecord, VoteChoice } from "@kuvend/contracts";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  Badge,
+  Button,
+  Checkbox,
   Dialog as ShadDialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Progress, ProgressLabel, ProgressValue } from "@/components/ui/progress";
-import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+  Input,
+  Label,
+  NativeSelect,
+  Progress,
+  ProgressLabel,
+  ProgressValue,
   Select,
   SelectContent,
   SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+  Textarea,
+} from "@kuvend/ui";
 import {
   ArrowLeft,
   Bell,
@@ -41,8 +49,10 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { EvidenceEditor, EvidenceList } from "../features/kuvend/evidence";
+import { fallbackProposals } from "../features/kuvend/fallback-data";
 
-const civicUrl = process.env.NEXT_PUBLIC_CIVIC_API_URL ?? "http://localhost:4000";
+const civicUrl = process.env.NEXT_PUBLIC_CIVIC_API_URL ?? "";
 const issuerUrl = process.env.NEXT_PUBLIC_ISSUER_URL ?? "http://localhost:4001";
 const assistantUrl = process.env.NEXT_PUBLIC_ASSISTANT_URL ?? "http://localhost:4002";
 const notificationsUrl = process.env.NEXT_PUBLIC_NOTIFICATIONS_URL ?? "http://localhost:4004";
@@ -57,111 +67,7 @@ const categoryLabels: Record<string, string> = {
   other: "Tjetër",
 };
 
-export const fallback: ProposalRecord[] = [
-  {
-    id: "11111111-1111-4111-8111-111111111111",
-    title: "Më shumë hije në stacionet e autobusëve",
-    summary: "Stacionet pa hije i ekspozojnë udhëtarët ndaj vapës së verës.",
-    problem:
-      "Shumë stacione autobusi nuk kanë strehë ose hije. Të moshuarit, fëmijët dhe udhëtarët presin në diell për periudha të gjata.",
-    proposedChange:
-      "Bashkitë të hartëzojnë stacionet më të përdorura dhe të vendosin strehë me hije, ulëse dhe informacion të qartë për linjat.",
-    scope: "national",
-    category: "transport",
-    evidence: [],
-    pseudonym: "Lisi i Qetë",
-    status: "voting_open",
-    revisionNumber: 1,
-    votingRound: {
-      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-      opensAt: "2026-07-24T09:00:00.000Z",
-      closesAt: "2026-08-07T09:00:00.000Z",
-      turnout: 428,
-    },
-    arguments: [
-      {
-        id: "a1",
-        position: "for",
-        body: "Një ndërhyrje e vogël që e bën transportin publik më njerëzor.",
-        evidence: [],
-        pseudonym: "Ura e Hapur",
-        createdAt: "2026-07-25T10:00:00.000Z",
-      },
-      {
-        id: "a2",
-        position: "against",
-        body: "Duhet përcaktuar fillimisht kush mbulon mirëmbajtjen vjetore.",
-        evidence: [],
-        pseudonym: "Guri i Bardhë",
-        createdAt: "2026-07-26T10:00:00.000Z",
-      },
-    ],
-    statusHistory: [
-      {
-        status: "voting_open",
-        at: "2026-07-24T09:00:00.000Z",
-        note: "Kaloi kontrollin e moderimit.",
-      },
-    ],
-  },
-  {
-    id: "22222222-2222-4222-8222-222222222222",
-    title: "Kontratat publike në format të hapur",
-    summary: "Kontratat duhet të jenë të kërkueshme dhe të ripërdorshme, jo vetëm PDF.",
-    problem:
-      "Dokumentet publike shpesh publikohen në formate që nuk mund të kërkohen ose analizohen lehtë.",
-    proposedChange:
-      "Çdo kontratë publike të publikohet edhe si të dhëna të strukturuara me palët, vlerën dhe afatet.",
-    scope: "national",
-    category: "governance",
-    evidence: [],
-    pseudonym: "Fjala e Lirë",
-    status: "voting_open",
-    revisionNumber: 1,
-    votingRound: {
-      id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-      opensAt: "2026-07-28T09:00:00.000Z",
-      closesAt: "2026-08-11T09:00:00.000Z",
-      turnout: 312,
-    },
-    arguments: [],
-    statusHistory: [
-      {
-        status: "voting_open",
-        at: "2026-07-28T09:00:00.000Z",
-        note: "Kaloi kontrollin e moderimit.",
-      },
-    ],
-  },
-  {
-    id: "33333333-3333-4333-8333-333333333333",
-    title: "Kalime më të sigurta pranë shkollave",
-    summary: "Sinjalistikë dhe ndriçim më i mirë në zonat me fëmijë.",
-    problem: "Disa hyrje shkollash nuk kanë kalime të dukshme dhe ngadalësues trafiku.",
-    proposedChange:
-      "Auditim i sigurisë dhe ndërhyrje prioritare në një rreze prej 300 metrash nga çdo shkollë.",
-    scope: "national",
-    category: "community",
-    evidence: [],
-    pseudonym: "Drita e Mëngjesit",
-    status: "voting_open",
-    revisionNumber: 1,
-    votingRound: {
-      id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
-      opensAt: "2026-07-30T09:00:00.000Z",
-      closesAt: "2026-08-13T09:00:00.000Z",
-      turnout: 187,
-    },
-    arguments: [],
-    statusHistory: [
-      {
-        status: "voting_open",
-        at: "2026-07-30T09:00:00.000Z",
-        note: "Kaloi kontrollin e moderimit.",
-      },
-    ],
-  },
-];
+export const fallback = fallbackProposals;
 
 type Dialog =
   "proposal" | "argument" | "notification" | "otp" | "receipt" | "recovery" | "manage" | null;
@@ -195,7 +101,7 @@ function formatDate(value: string) {
 
 export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string }) {
   const [proposals, setProposals] = useState<ProposalRecord[]>(fallback);
-  const [selectedId, setSelectedId] = useState(initialSelectedId ?? fallback[0]!.id);
+  const [selectedId, setSelectedId] = useState(initialSelectedId ?? "");
   const [query, setQuery] = useState("");
   const [dialog, setDialog] = useState<Dialog>(null);
   const [pendingVote, setPendingVote] = useState<VoteChoice | null>(null);
@@ -214,6 +120,7 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
   useEffect(() => {
     setDisplayNow(Date.now());
     setCredential(localStorage.getItem("kuvend.syntheticCredential.v1") ?? "");
+    if (!civicUrl) return;
     fetch(`${civicUrl}/v1/proposals`)
       .then((response) => (response.ok ? response.json() : Promise.reject()))
       .then((data: { proposals: ProposalRecord[] }) => setProposals(data.proposals))
@@ -314,8 +221,14 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
         >
           <Bell data-icon="inline-start" /> Njoftimet
         </Button>
-        <Button size="lg" className="compact" onClick={() => setDialog("proposal")}>
-          <Plus data-icon="inline-start" /> Bëj një propozim
+        <Button
+          size="lg"
+          className="compact"
+          aria-label="Propozo"
+          onClick={() => setDialog("proposal")}
+        >
+          <Plus data-icon="inline-start" />
+          <span className="mobile-label">Propozo</span>
         </Button>
         <Button
           variant="ghost"
@@ -336,22 +249,24 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
           <a href="#si-funksionon" onClick={() => setMenuOpen(false)}>
             Si funksionon
           </a>
-          <button
+          <Button
+            variant="ghost"
             onClick={() => {
               setMenuOpen(false);
               setDialog("notification");
             }}
           >
             Njoftimet
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
             onClick={() => {
               setMenuOpen(false);
               setDialog("proposal");
             }}
           >
             Bëj një propozim
-          </button>
+          </Button>
         </nav>
       )}
 
@@ -405,7 +320,7 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
             </div>
             <div className="search">
               <Search size={18} />
-              <input
+              <Input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 aria-label="Kërko propozime"
@@ -414,15 +329,19 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
             </div>
           </div>
           <div className="proposal-grid">
-            <div className={`proposal-list ${selected ? "has-selection" : ""}`}>
+            <div className={`proposal-list ${selectedId ? "has-selection" : ""}`}>
               {visible.map((proposal) => (
-                <button
+                <Button
+                  variant="ghost"
                   key={proposal.id}
                   className={`proposal-card ${proposal.id === selected.id ? "active" : ""}`}
                   onClick={() => {
                     setSelectedId(proposal.id);
                     history.replaceState(null, "", `/propozime/${proposal.id}`);
                     setResult(null);
+                    requestAnimationFrame(() =>
+                      document.querySelector(".proposal-area")?.scrollIntoView({ block: "start" }),
+                    );
                   }}
                 >
                   <div className="card-top">
@@ -451,16 +370,23 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
                     </span>
                     <ChevronRight size={18} />
                   </div>
-                </button>
+                </Button>
               ))}
             </div>
             <article className="proposal-detail">
-              <button
+              <Button
+                variant="ghost"
                 className="mobile-back"
-                onClick={() => document.querySelector(".proposal-list")?.scrollIntoView()}
+                onClick={() => {
+                  setSelectedId("");
+                  history.replaceState(null, "", "/");
+                  requestAnimationFrame(() =>
+                    document.querySelector(".proposal-area")?.scrollIntoView({ block: "start" }),
+                  );
+                }}
               >
                 <ArrowLeft size={17} /> Të gjitha propozimet
-              </button>
+              </Button>
               <div className="detail-meta">
                 <Badge variant="secondary">{categoryLabels[selected.category] ?? "Tjetër"}</Badge>
                 <Badge variant="outline">{statusLabel(selected.status)}</Badge>
@@ -481,16 +407,16 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
               </div>
               <h2>{selected.title}</h2>
               <section>
-                <h4>Problemi</h4>
+                <h3>Problemi</h3>
                 <p>{selected.problem}</p>
               </section>
               <section>
-                <h4>Ndryshimi i propozuar</h4>
+                <h3>Ndryshimi i propozuar</h3>
                 <p>{selected.proposedChange}</p>
               </section>
               {selected.evidence.length > 0 && (
                 <section>
-                  <h4>Prova dhe media</h4>
+                  <h3>Prova dhe media</h3>
                   <EvidenceList items={selected.evidence} />
                 </section>
               )}
@@ -514,9 +440,14 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
                     }
                   </strong>
                 </div>
-                <button aria-label="Shto argument" onClick={() => setDialog("argument")}>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Shto argument"
+                  onClick={() => setDialog("argument")}
+                >
                   <MessageSquareText />
-                </button>
+                </Button>
               </div>
               {selected.arguments.length > 0 && (
                 <div className="argument-samples">
@@ -531,7 +462,7 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
                 </div>
               )}
               <section>
-                <h4>Historiku</h4>
+                <h3>Historiku</h3>
                 <ol className="status-timeline">
                   {selected.statusHistory.map((event, index) => (
                     <li key={`${event.at}-${index}`}>
@@ -544,7 +475,7 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
               </section>
               {selected.institutionalResponse && (
                 <section className="institutional-response">
-                  <h4>Përgjigjja institucionale</h4>
+                  <h3>Përgjigjja institucionale</h3>
                   <p>
                     <strong>{selected.institutionalResponse.institution}</strong> —{" "}
                     {responseStatusLabel(selected.institutionalResponse.status)}
@@ -591,23 +522,25 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
                       </div>
                     </div>
                     <div className="vote-buttons">
-                      <button
+                      <Button
+                        variant="outline"
                         className={pendingVote === "support" ? "support active" : "support"}
                         onClick={() => beginVote("support")}
                       >
                         <Check /> Mbështes
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="outline"
                         className={pendingVote === "oppose" ? "oppose active" : "oppose"}
                         onClick={() => beginVote("oppose")}
                       >
                         <X /> Kundërshtoj
-                      </button>
+                      </Button>
                     </div>
                     {pendingVote && credential && (
-                      <button className="primary confirm" onClick={() => void castVote()}>
+                      <Button className="confirm" onClick={() => void castVote()}>
                         Konfirmo votën përfundimtare
-                      </button>
+                      </Button>
                     )}
                     <p className="fineprint">
                       <LockKeyhole size={13} /> Vota është përfundimtare dhe këshilluese.
@@ -897,24 +830,26 @@ function OtpDialog({
       </div>
       {!challenge ? (
         <>
-          <label>
-            Numri i telefonit
-            <input
+          <Field>
+            <Label htmlFor="otp-phone">Numri i telefonit</Label>
+            <Input
+              id="otp-phone"
               value={phone}
               onChange={(event) => setPhone(event.target.value)}
               inputMode="tel"
               autoFocus
             />
-          </label>
-          <button className="primary full" onClick={() => void start()}>
+          </Field>
+          <Button className="full" onClick={() => void start()}>
             Dërgo kodin
-          </button>
+          </Button>
         </>
       ) : (
         <>
-          <label>
-            Kodi gjashtëshifror
-            <input
+          <Field>
+            <Label htmlFor="otp-code">Kodi gjashtëshifror</Label>
+            <Input
+              id="otp-code"
               value={code}
               onChange={(event) => setCode(event.target.value)}
               inputMode="numeric"
@@ -922,15 +857,15 @@ function OtpDialog({
               autoFocus
               placeholder="123456"
             />
-          </label>
+          </Field>
           {otpProvider === "synthetic" && (
             <p className="dev-note">
               Beta sintetike: përdor kodin <strong>123456</strong>.
             </p>
           )}
-          <button className="primary full" onClick={() => void check()}>
+          <Button className="full" onClick={() => void check()}>
             Verifiko dhe vazhdo
-          </button>
+          </Button>
         </>
       )}
       {error && <p className="error">{error}</p>}
@@ -1195,8 +1130,7 @@ function ProposalDialog({
               )}
             </div>
             <label className="confirm-check">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={confirmed}
                 onChange={(event) => setConfirmed(event.target.checked)}
               />
@@ -1286,12 +1220,10 @@ function ReceiptDialog({
         <code>{receipt}</code>
       </div>
       <div className="dialog-actions">
-        <button className="secondary" onClick={download}>
+        <Button variant="outline" onClick={download}>
           Shkarko
-        </button>
-        <button className="primary" onClick={() => void verify()}>
-          Verifiko përfshirjen
-        </button>
+        </Button>
+        <Button onClick={() => void verify()}>Verifiko përfshirjen</Button>
       </div>
       {verification === "included" && (
         <div className="subscription-success">
@@ -1335,12 +1267,10 @@ function RecoveryDialog({ secret, onClose }: { secret: string; onClose: () => vo
         <code>{secret}</code>
       </div>
       <div className="dialog-actions">
-        <button className="secondary" onClick={() => void navigator.clipboard.writeText(secret)}>
+        <Button variant="outline" onClick={() => void navigator.clipboard.writeText(secret)}>
           Kopjo
-        </button>
-        <button className="primary" onClick={download}>
-          Shkarko dhe vazhdo
-        </button>
+        </Button>
+        <Button onClick={download}>Shkarko dhe vazhdo</Button>
       </div>
     </DialogShell>
   );
@@ -1406,28 +1336,31 @@ function ManageProposalDialog({
     >
       <div className="position-tabs">
         {canRevise && (
-          <button
+          <Button
+            variant="outline"
             className={action === "revise" ? "selected" : ""}
             onClick={() => setAction("revise")}
           >
             Ndrysho
-          </button>
+          </Button>
         )}
         {canWithdraw && (
-          <button
+          <Button
+            variant="outline"
             className={action === "withdraw" ? "selected" : ""}
             onClick={() => setAction("withdraw")}
           >
             Tërhiqe
-          </button>
+          </Button>
         )}
         {canAppeal && (
-          <button
+          <Button
+            variant="outline"
             className={action === "appeal" ? "selected" : ""}
             onClick={() => setAction("appeal")}
           >
             Apelo
-          </button>
+          </Button>
         )}
       </div>
       {action === "revise" ? (
@@ -1458,7 +1391,7 @@ function ManageProposalDialog({
           </Field>
           <Field>
             <FieldLabel htmlFor="manage-category">Kategoria</FieldLabel>
-            <select
+            <NativeSelect
               id="manage-category"
               value={category}
               onChange={(event) => setCategory(event.target.value as ProposalRecord["category"])}
@@ -1468,7 +1401,7 @@ function ManageProposalDialog({
                   {label}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </Field>
           <EvidenceEditor items={evidence} onChange={setEvidence} limit={8} />
         </FieldGroup>
@@ -1614,8 +1547,7 @@ function NotificationDialog({ onClose }: { onClose: () => void }) {
         <div>
           {Object.entries(categoryLabels).map(([value, label]) => (
             <label key={value}>
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={categories.includes(value)}
                 onChange={(event) =>
                   setCategories((items) =>
@@ -1630,17 +1562,13 @@ function NotificationDialog({ onClose }: { onClose: () => void }) {
           ))}
         </div>
       </fieldset>
-      <button
-        className="primary full"
-        disabled={state === "working"}
-        onClick={() => void subscribe()}
-      >
+      <Button className="full" disabled={state === "working"} onClick={() => void subscribe()}>
         {state === "working"
           ? "Duke ruajtur…"
           : state === "done"
             ? "Ruaj temat"
             : "Aktivizo njoftimet"}
-      </button>
+      </Button>
       {state === "done" && (
         <>
           <div className="subscription-success">
@@ -1712,130 +1640,37 @@ function ArgumentDialog({
       onClose={onClose}
     >
       <div className="position-tabs">
-        <button className={position === "for" ? "selected" : ""} onClick={() => setPosition("for")}>
+        <Button
+          variant="outline"
+          className={position === "for" ? "selected" : ""}
+          onClick={() => setPosition("for")}
+        >
           <Check /> Pro
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="outline"
           className={position === "against" ? "selected" : ""}
           onClick={() => setPosition("against")}
         >
           <X /> Kundër
-        </button>
+        </Button>
       </div>
-      <label>
-        Argumenti
-        <textarea
+      <Field>
+        <Label htmlFor="argument-body">Argumenti</Label>
+        <Textarea
+          id="argument-body"
           value={body}
           onChange={(event) => setBody(event.target.value)}
           placeholder="Shpjego një arsye të vetme, qartë dhe shkurt..."
           maxLength={700}
         />
-      </label>
+      </Field>
       <EvidenceEditor items={evidence} onChange={setEvidence} limit={3} />
       <p className="fineprint">Publikohet me një pseudonim të rastësishëm. Nuk krijohet profil.</p>
-      <button className="primary full" onClick={() => void submit()}>
+      <Button className="full" onClick={() => void submit()}>
         Publiko argumentin
-      </button>
+      </Button>
       {error && <p className="error">{error}</p>}
     </DialogShell>
-  );
-}
-
-function EvidenceEditor({
-  items,
-  onChange,
-  limit,
-}: {
-  items: EvidenceItem[];
-  onChange: (items: EvidenceItem[]) => void;
-  limit: number;
-}) {
-  const [type, setType] = useState<EvidenceItem["type"]>("source");
-  const [title, setTitle] = useState("");
-  const [url, setUrl] = useState("");
-  const labels = { source: "Burim", document: "Dokument", image: "Imazh", video: "Video" };
-  function add() {
-    if (!title.trim() || !url.startsWith("https://") || items.length >= limit) return;
-    onChange([...items, { type, title: title.trim(), url }]);
-    setTitle("");
-    setUrl("");
-  }
-  return (
-    <fieldset className="evidence-editor">
-      <legend>
-        Prova dhe media <small>Opsionale</small>
-      </legend>
-      <p>
-        Shto burime, dokumente, imazhe ose video si lidhje HTTPS. Media nuk ngarkohet ose hapet
-        automatikisht.
-      </p>
-      <div className="evidence-fields">
-        <select
-          aria-label="Lloji i provës"
-          value={type}
-          onChange={(event) => setType(event.target.value as EvidenceItem["type"])}
-        >
-          {Object.entries(labels).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-        <input
-          aria-label="Titulli i provës"
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          placeholder="Titulli ose përshkrimi"
-        />
-        <input
-          aria-label="Lidhja e provës"
-          value={url}
-          onChange={(event) => setUrl(event.target.value)}
-          placeholder="https://…"
-          inputMode="url"
-        />
-        <button type="button" className="secondary" onClick={add} disabled={items.length >= limit}>
-          Shto
-        </button>
-      </div>
-      <EvidenceList
-        items={items}
-        onRemove={(index) => onChange(items.filter((_, itemIndex) => itemIndex !== index))}
-      />
-    </fieldset>
-  );
-}
-
-function EvidenceList({
-  items,
-  onRemove,
-}: {
-  items: EvidenceItem[];
-  onRemove?: (index: number) => void;
-}) {
-  return (
-    <div className="evidence-list">
-      {items.map((item, index) => (
-        <div key={`${item.url}-${index}`}>
-          <span>
-            {item.type === "image"
-              ? "Imazh"
-              : item.type === "video"
-                ? "Video"
-                : item.type === "document"
-                  ? "Dokument"
-                  : "Burim"}
-          </span>
-          <a href={item.url} target="_blank" rel="noreferrer nofollow">
-            {item.title}
-          </a>
-          {onRemove && (
-            <button type="button" onClick={() => onRemove(index)} aria-label={`Hiq ${item.title}`}>
-              <X size={14} />
-            </button>
-          )}
-        </div>
-      ))}
-    </div>
   );
 }

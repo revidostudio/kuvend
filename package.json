@@ -8,17 +8,36 @@
   },
   "scripts": {
     "build": "pnpm -r --if-present build",
+    "design:check": "tsx tooling/design-system/check.ts",
+    "design:test": "vitest run tooling/design-system/check.test.ts",
+    "infra:check": "node tooling/railway/check-config.mjs",
+    "setup:hooks": "git config core.hooksPath .githooks",
+    "storybook": "storybook dev -p 6006",
+    "storybook:build": "storybook build",
+    "test:e2e": "pnpm --filter @kuvend/web build && playwright test",
+    "lighthouse": "lhci autorun",
     "dev": "concurrently -n civic,issuer,assistant,notify,admin,web -c blue,magenta,cyan,white,yellow,green \"pnpm --filter @kuvend/civic-api dev\" \"pnpm --filter @kuvend/issuer dev\" \"pnpm --filter @kuvend/assistant dev\" \"pnpm --filter @kuvend/notifications dev\" \"pnpm --filter @kuvend/admin dev\" \"pnpm --filter @kuvend/web dev\"",
     "format:check": "prettier --check .",
     "lint": "pnpm -r --if-present lint",
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r --if-present typecheck",
-    "validate": "pnpm format:check && pnpm typecheck && pnpm test && pnpm build"
+    "validate": "pnpm format:check && pnpm infra:check && pnpm design:check && pnpm design:test && pnpm typecheck && pnpm test && pnpm build && pnpm storybook:build"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",
+    "@axe-core/playwright": "^4.12.1",
+    "@lhci/cli": "^0.15.1",
+    "@playwright/test": "^1.62.1",
+    "@storybook/addon-a11y": "^10.5.5",
+    "@storybook/react-vite": "^10.5.5",
+    "@tailwindcss/vite": "^4.3.3",
     "concurrently": "^9.2.1",
     "prettier": "^3.6.2",
+    "postcss": "^8.5.6",
+    "ts-morph": "^26.0.0",
+    "tsx": "^4.20.5",
+    "storybook": "^10.5.5",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
   }

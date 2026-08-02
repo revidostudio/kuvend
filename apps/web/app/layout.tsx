@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import "./tailwind.css";
-import "./globals.css";
+import "@kuvend/ui/styles.css";
 import { Geist } from "next/font/google";
-import { cn } from "@/lib/utils";
+import { cn } from "@kuvend/ui";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="sq" className={cn("font-sans", geist.variable)}>
-      <body>
+      <body className="min-w-80 overflow-x-hidden bg-background text-foreground antialiased">
         {children}
         <script
           type="application/ld+json"

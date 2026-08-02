@@ -1,0 +1,13 @@
+@import "tailwindcss";
+@source "../../../../packages/ui/src";
+
+body {
+  margin: 0;
+  min-width: 20rem;
+  background: var(--kuvend-surface);
+  color: var(--kuvend-ink);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+* {
+  box-sizing: border-box;
+}

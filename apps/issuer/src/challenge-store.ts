@@ -78,7 +78,7 @@ export class PostgresChallengeStore implements ChallengeStore {
   private readonly sql;
 
   constructor(databaseUrl: string) {
-    this.sql = postgres(databaseUrl, { max: 5 });
+    this.sql = postgres(databaseUrl, { max: 5, idle_timeout: 20 });
   }
 
   async initialize() {

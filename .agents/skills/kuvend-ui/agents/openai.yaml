@@ -1,0 +1,7 @@
+interface:
+  display_name: "Kuvend UI"
+  short_description: "Build compliant mobile-first Kuvend interfaces"
+  brand_color: "#D71920"
+  default_prompt: "Use $kuvend-ui to build this Kuvend interface with the repository design system."
+policy:
+  allow_implicit_invocation: true

@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "./kuvend.css";
+@source "../../../packages/ui/src";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -48,24 +50,24 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: var(--kuvend-canvas, oklch(1 0 0));
+  --foreground: var(--kuvend-ink, oklch(0.2 0.035 264));
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.48 0.2 27);
+  --primary: var(--kuvend-red, oklch(0.52 0.21 27));
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  --muted-foreground: var(--kuvend-ink-soft, oklch(0.43 0.025 264));
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.48 0.2 27);
+  --border: var(--kuvend-border, oklch(0.91 0.008 264));
+  --input: var(--kuvend-border-strong, oklch(0.78 0.012 264));
+  --ring: var(--kuvend-focus, oklch(0.58 0.18 255));
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -122,8 +124,19 @@
   }
   body {
     @apply bg-background text-foreground;
+    text-rendering: optimizeLegibility;
   }
   html {
     @apply font-sans;
+  }
+}
+
+@layer utilities {
+  .safe-bottom {
+    padding-bottom: var(--kuvend-safe-bottom);
+  }
+  .content-wrap {
+    width: min(100% - 2rem, var(--kuvend-content));
+    margin-inline: auto;
   }
 }

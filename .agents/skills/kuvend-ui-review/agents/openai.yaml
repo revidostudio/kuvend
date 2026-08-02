@@ -1,0 +1,7 @@
+interface:
+  display_name: "Kuvend UI Review"
+  short_description: "Audit design, mobile, access, and visual quality"
+  brand_color: "#001B44"
+  default_prompt: "Use $kuvend-ui-review to audit this Kuvend UI change before merge."
+policy:
+  allow_implicit_invocation: true

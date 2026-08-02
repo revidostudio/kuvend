@@ -1,0 +1,20 @@
+#!/bin/sh
+set -eu
+
+staged_files=$(git diff --cached --name-only --diff-filter=ACMR)
+
+for staged_file in $staged_files; do
+  case "$staged_file" in
+    .env|.env.*|*.pem|*.key|*.p12|*.pfx)
+      if [ "$staged_file" != ".env.example" ]; then
+        echo "Blocked: $staged_file may contain credentials and must not be committed." >&2
+        exit 1
+      fi
+      ;;
+  esac
+done
+
+if printf '%s\n' "$staged_files" | grep -Eq '(^|/)(railway\.json|Dockerfile)$|^tooling/railway/|^\.agents/skills/railway-kuvendi/|^docs/railway-operations\.md$'; then
+  pnpm infra:check
+fi
+

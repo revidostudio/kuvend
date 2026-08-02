@@ -1,0 +1,5 @@
+/packages/ui/ @revidostudio
+/apps/web/app/tailwind.css @revidostudio
+/apps/web/app/kuvend.css @revidostudio
+/.storybook/ @revidostudio
+/tests/e2e/ @revidostudio

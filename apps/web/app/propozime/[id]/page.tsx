@@ -14,6 +14,10 @@ interface ProposalPreview {
   votingRound?: { opensAt: string; closesAt: string };
 }
 
+export function generateStaticParams() {
+  return publicProposalPreviews.map(({ id }) => ({ id }));
+}
+
 async function getProposal(id: string): Promise<ProposalPreview | undefined> {
   const local = publicProposalPreviews.find((proposal) => proposal.id === id) as
     ProposalPreview | undefined;

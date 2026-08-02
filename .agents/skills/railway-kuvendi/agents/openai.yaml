@@ -1,0 +1,4 @@
+interface:
+  display_name: "Railway Kuvendi"
+  short_description: "Operate Kuvend safely on Railway"
+  default_prompt: "Use $railway-kuvendi to audit and safely update the Kuvend Railway deployment."

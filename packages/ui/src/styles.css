@@ -1,0 +1,48 @@
+:root {
+  color-scheme: light;
+  --kuvend-canvas: oklch(1 0 0);
+  --kuvend-ink: oklch(0.2 0.035 264);
+  --kuvend-ink-soft: oklch(0.43 0.025 264);
+  --kuvend-surface: oklch(0.985 0.004 264);
+  --kuvend-surface-raised: oklch(1 0 0);
+  --kuvend-border: oklch(0.91 0.008 264);
+  --kuvend-border-strong: oklch(0.78 0.012 264);
+  --kuvend-red: oklch(0.52 0.21 27);
+  --kuvend-red-hover: oklch(0.46 0.2 27);
+  --kuvend-red-soft: oklch(0.96 0.025 27);
+  --kuvend-success: oklch(0.5 0.14 145);
+  --kuvend-warning: oklch(0.63 0.13 75);
+  --kuvend-danger: oklch(0.52 0.2 27);
+  --kuvend-focus: oklch(0.58 0.18 255);
+  --kuvend-radius-sm: 0.375rem;
+  --kuvend-radius-md: 0.625rem;
+  --kuvend-radius-lg: 0.75rem;
+  --kuvend-shadow-overlay: 0 18px 50px oklch(0.2 0.035 264 / 0.16);
+  --kuvend-duration-fast: 120ms;
+  --kuvend-duration-base: 180ms;
+  --kuvend-content: 72rem;
+  --kuvend-reading: 46rem;
+  --kuvend-safe-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.dark {
+  --kuvend-canvas: oklch(0.16 0.02 264);
+  --kuvend-ink: oklch(0.96 0.006 264);
+  --kuvend-ink-soft: oklch(0.72 0.012 264);
+  --kuvend-surface: oklch(0.2 0.02 264);
+  --kuvend-surface-raised: oklch(0.23 0.02 264);
+  --kuvend-border: oklch(0.34 0.018 264);
+  --kuvend-border-strong: oklch(0.5 0.02 264);
+  --kuvend-red-soft: oklch(0.27 0.06 27);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
