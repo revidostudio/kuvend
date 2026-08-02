@@ -14,4 +14,3 @@ Better Auth or another conventional framework may serve maintainers and explicit
 ## Consequences
 
 The system cannot reuse ordinary account sessions for proposals or votes. User experience and abuse controls require additional design. The boundary is easier to inspect, and compromise of the administration account database does not directly identify anonymous civic actions.
-

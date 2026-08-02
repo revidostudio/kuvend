@@ -50,4 +50,3 @@ These limitations must remain visible in user-facing copy.
 - A maintainer cannot deploy both issuer and civic changes alone.
 
 This is a living model. Every architecture decision must name which adversary and invariant it affects.
-

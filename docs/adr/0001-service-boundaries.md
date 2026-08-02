@@ -14,4 +14,3 @@ Identity issuance, relay/gateway transport, and civic participation are distinct
 ## Consequences
 
 Deployment is harder and costs more than a modular monolith. Local development must simulate multiple services. Operational collusion and low-volume timing attacks remain risks. In exchange, a founder controlling only the civic project cannot answer a retrospective request with a phone-to-action mapping because the project never creates one.
-

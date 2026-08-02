@@ -57,4 +57,3 @@ There is intentionally no production application scaffold yet. Start by reviewin
 ## License
 
 Copyright (c) 2026 Open Civic contributors. Licensed under the [GNU Affero General Public License v3.0](LICENSE).
-

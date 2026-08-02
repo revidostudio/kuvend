@@ -43,4 +43,3 @@ No founder should be technically able to access or change every privacy-critical
 ## Changing this charter
 
 Changes require a public proposal, at least 30 days for comment, and approval from at least two-thirds of eligible maintainers. The noncommercial promise and the rule that money buys no influence may only be strengthened, not removed, by the official project.
-

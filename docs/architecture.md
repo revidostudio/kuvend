@@ -39,4 +39,3 @@ The exact credential and relay protocols are not selected yet. Candidates must b
 ## Nonanonymous administration
 
 Maintainer accounts and sponsor administration are a different security domain. A conventional account framework such as Better Auth may be used there, but its cookies, identifiers, database, telemetry, and origin must never enter the anonymous participation path.
-

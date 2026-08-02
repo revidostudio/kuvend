@@ -11,4 +11,3 @@ Do not open a public issue for a vulnerability that could expose a participant o
 ## Scope of future reviews
 
 Production readiness will require review of the protocol, browser and native clients, credential issuer, relay/gateway path, civic service, deployment artifacts, build provenance, logs, backups, key custody, access controls, and incident procedures. Reviewing source code alone is insufficient to validate the deployed privacy claim.
-

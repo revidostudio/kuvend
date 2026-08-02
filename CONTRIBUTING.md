@@ -20,4 +20,3 @@ Use `docs/adr/NNNN-short-name.md` with context, decision, consequences, alternat
 Discuss systems and evidence, not personal motives. Do not post phone numbers, identity records, private submissions, exploit details affecting a live deployment, or information that could identify a participant.
 
 Report vulnerabilities according to [SECURITY.md](SECURITY.md).
-

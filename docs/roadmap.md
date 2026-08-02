@@ -49,4 +49,3 @@ Exit condition: published audit findings are resolved or explicitly accepted, an
 - How should eligibility revocation work without enabling linkage?
 - Which abuse controls remain compatible with anonymous participation?
 - What moderation evidence can be retained without creating authorship clues?
-
