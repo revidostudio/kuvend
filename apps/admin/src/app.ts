@@ -24,7 +24,7 @@ const responseSchema = z
   })
   .strict();
 
-const clientRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../client");
+const defaultClientRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../client");
 
 export function buildApp(
   options: {
@@ -33,11 +33,13 @@ export function buildApp(
     civicUrl?: string;
     notificationsUrl?: string;
     adminKey?: string;
+    clientRoot?: string;
   } = {},
 ) {
   const app = Fastify({ logger: false, bodyLimit: 12_000 });
+  const clientRoot = options.clientRoot ?? defaultClientRoot;
   if (existsSync(clientRoot)) {
-    void app.register(fastifyStatic, { root: clientRoot, wildcard: false });
+    void app.register(fastifyStatic, { root: clientRoot, wildcard: false, index: false });
   }
   const civicUrl = options.civicUrl ?? process.env.CIVIC_API_URL ?? "http://localhost:4000";
   const notificationsUrl =

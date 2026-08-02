@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import path from "node:path";
 import { MemoryAdminAuditStore } from "./audit-store.js";
 import { buildApp } from "./app.js";
 
@@ -22,7 +23,11 @@ describe("admin trust domain", () => {
       fetchImpl,
       civicUrl: "https://civic.test",
       adminKey: "key",
+      clientRoot: path.resolve("src/client"),
     });
+    const page = await app.inject({ method: "GET", url: "/" });
+    expect(page.statusCode).toBe(200);
+    expect(page.body).toContain('<div id="root"></div>');
     const response = await app.inject({
       method: "POST",
       url: "/v1/proposals/11111111-1111-4111-8111-111111111111/moderate",
