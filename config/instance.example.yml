@@ -1,0 +1,27 @@
+instance:
+  id: albania-demo
+  name: Open Civic Albania (Demo)
+  country: AL
+  languages:
+    - sq
+    - en
+  timezone: Europe/Tirane
+
+participation:
+  proposals:
+    credential: single_use
+  voting:
+    credential: topic_scoped
+  attachments: disabled
+
+privacy:
+  # Illustrative policy values, not production recommendations.
+  issuance_epoch_minutes: 60
+  publication_time_precision: day
+  raw_ip_retention: disabled
+  shared_analytics: disabled
+
+funding:
+  provider: github_sponsors
+  influence: none
+
