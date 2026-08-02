@@ -1,7 +1,7 @@
 import type { ProposalRecord } from "@kuvend/contracts";
 
 const now = new Date();
-const closesAt = new Date(now.getTime() + 12 * 24 * 60 * 60 * 1_000).toISOString();
+const closesAt = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1_000).toISOString();
 
 export const seedProposals: ProposalRecord[] = [
   {

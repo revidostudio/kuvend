@@ -5,6 +5,21 @@ import { buildApp } from "./app.js";
 import { MemoryCivicStore } from "./store.js";
 
 describe("civic API", () => {
+  it("allows an explicitly configured deployment origin", async () => {
+    const previous = process.env.CORS_ALLOWED_ORIGINS;
+    process.env.CORS_ALLOWED_ORIGINS = "https://web.example.test";
+    const app = buildApp(new MemoryCivicStore());
+    const response = await app.inject({
+      method: "OPTIONS",
+      url: "/v1/proposals",
+      headers: { origin: "https://web.example.test", "access-control-request-method": "GET" },
+    });
+    expect(response.headers["access-control-allow-origin"]).toBe("https://web.example.test");
+    await app.close();
+    if (previous === undefined) delete process.env.CORS_ALLOWED_ORIGINS;
+    else process.env.CORS_ALLOWED_ORIGINS = previous;
+  });
+
   it("does not expose vote split before a participant votes", async () => {
     const app = buildApp(new MemoryCivicStore());
     const response = await app.inject({ method: "GET", url: "/v1/proposals" });

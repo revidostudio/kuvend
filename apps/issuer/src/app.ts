@@ -31,6 +31,10 @@ export function buildApp(options: { provider?: OtpProvider; store?: ChallengeSto
   const provider = options.provider ?? configuredProvider();
   const signingKey = process.env.SYNTHETIC_SIGNING_KEY ?? "development-only-change-me";
   const digestKey = process.env.ISSUER_DIGEST_KEY ?? "development-digest-key";
+  const configuredOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 
   void app.register(cors, {
     origin: [
@@ -38,6 +42,7 @@ export function buildApp(options: { provider?: OtpProvider; store?: ChallengeSto
       /^http:\/\/127\.0\.0\.1:\d+$/,
       /^http:\/\/\[::1\]:\d+$/,
       /^https:\/\/([a-z0-9-]+\.)?kuvend\.org$/,
+      ...configuredOrigins,
     ],
     methods: ["GET", "POST"],
   });

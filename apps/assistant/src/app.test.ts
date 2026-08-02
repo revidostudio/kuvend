@@ -2,6 +2,21 @@ import { describe, expect, it } from "vitest";
 import { buildApp } from "./app.js";
 
 describe("assistant", () => {
+  it("allows an explicitly configured deployment origin", async () => {
+    const previous = process.env.CORS_ALLOWED_ORIGINS;
+    process.env.CORS_ALLOWED_ORIGINS = "https://web.example.test";
+    const app = buildApp();
+    const response = await app.inject({
+      method: "OPTIONS",
+      url: "/v1/assist",
+      headers: { origin: "https://web.example.test", "access-control-request-method": "POST" },
+    });
+    expect(response.headers["access-control-allow-origin"]).toBe("https://web.example.test");
+    await app.close();
+    if (previous === undefined) delete process.env.CORS_ALLOWED_ORIGINS;
+    else process.env.CORS_ALLOWED_ORIGINS = previous;
+  });
+
   it("keeps original text beside an optional suggestion", async () => {
     const app = buildApp();
     const response = await app.inject({

@@ -20,9 +20,17 @@ export function buildApp(store: CivicStore) {
   const app = Fastify({ logger: false, bodyLimit: 32_000 });
   const signingKey = process.env.SYNTHETIC_SIGNING_KEY ?? "development-only-change-me";
   const transparencyKey = process.env.TRANSPARENCY_SIGNING_KEY ?? "development-transparency-key";
+  const configuredOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 
   void app.register(cors, {
-    origin: [/^http:\/\/localhost:\d+$/, /^https:\/\/([a-z0-9-]+\.)?kuvend\.org$/],
+    origin: [
+      /^http:\/\/localhost:\d+$/,
+      /^https:\/\/([a-z0-9-]+\.)?kuvend\.org$/,
+      ...configuredOrigins,
+    ],
     methods: ["GET", "POST"],
   });
 

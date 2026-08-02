@@ -3,6 +3,21 @@ import { buildApp } from "./app.js";
 import { MemoryNotificationStore } from "./store.js";
 
 describe("notification boundary", () => {
+  it("allows an explicitly configured deployment origin", async () => {
+    const previous = process.env.CORS_ALLOWED_ORIGINS;
+    process.env.CORS_ALLOWED_ORIGINS = "https://web.example.test";
+    const app = buildApp();
+    const response = await app.inject({
+      method: "OPTIONS",
+      url: "/v1/config",
+      headers: { origin: "https://web.example.test", "access-control-request-method": "GET" },
+    });
+    expect(response.headers["access-control-allow-origin"]).toBe("https://web.example.test");
+    await app.close();
+    if (previous === undefined) delete process.env.CORS_ALLOWED_ORIGINS;
+    else process.env.CORS_ALLOWED_ORIGINS = previous;
+  });
+
   it("rejects civic and phone fields", async () => {
     const app = buildApp();
     const response = await app.inject({

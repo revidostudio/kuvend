@@ -63,8 +63,16 @@ function clean(value: string): string {
 
 export function buildApp(options: { civicApiUrl?: string } = {}) {
   const app = Fastify({ logger: false, bodyLimit: 16_000 });
+  const configuredOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
   void app.register(cors, {
-    origin: [/^http:\/\/localhost:\d+$/, /^https:\/\/([a-z0-9-]+\.)?kuvend\.org$/],
+    origin: [
+      /^http:\/\/localhost:\d+$/,
+      /^https:\/\/([a-z0-9-]+\.)?kuvend\.org$/,
+      ...configuredOrigins,
+    ],
     methods: ["GET", "POST"],
   });
   app.get("/health", async () => ({ ok: true, retention: "none", syntheticOnly: true }));

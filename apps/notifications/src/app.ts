@@ -32,13 +32,21 @@ export function buildApp(options: { store?: NotificationStore } = {}) {
   const publicKey = process.env.VAPID_PUBLIC_KEY ?? generated.publicKey;
   const privateKey = process.env.VAPID_PRIVATE_KEY ?? generated.privateKey;
   const store = options.store ?? new MemoryNotificationStore();
+  const configuredOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
   webpush.setVapidDetails(
     process.env.VAPID_SUBJECT ?? "mailto:security@kuvend.org",
     publicKey,
     privateKey,
   );
   void app.register(cors, {
-    origin: [/^http:\/\/localhost:\d+$/, /^https:\/\/([a-z0-9-]+\.)?kuvend\.org$/],
+    origin: [
+      /^http:\/\/localhost:\d+$/,
+      /^https:\/\/([a-z0-9-]+\.)?kuvend\.org$/,
+      ...configuredOrigins,
+    ],
     methods: ["GET", "POST", "DELETE"],
   });
   app.get("/health", async () => ({
