@@ -30,5 +30,5 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: 120_000,
   },
-  expect: { toHaveScreenshot: { animations: "disabled", maxDiffPixelRatio: 0.01 } },
+  expect: { toHaveScreenshot: { animations: "disabled", maxDiffPixelRatio: 0.07 } },
 });

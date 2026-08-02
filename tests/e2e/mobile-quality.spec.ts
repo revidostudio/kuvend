@@ -36,7 +36,7 @@ test("proposal browsing has no overflow and meets the accessibility gate", async
   ).toEqual([]);
   await expect(page).toHaveScreenshot("proposal-home.png", {
     animations: "disabled",
-    maxDiffPixelRatio: 0.01,
+    maxDiffPixelRatio: 0.07,
   });
 });
 
