@@ -2,7 +2,7 @@
 
 ## Current status
 
-Open Civic is pre-alpha design work and must not be used for sensitive or production participation. No security bounty or guaranteed response time exists yet.
+Kuvend is a synthetic reference system and must not be used for sensitive or production participation. No security bounty or guaranteed response time exists yet.
 
 ## Reporting
 

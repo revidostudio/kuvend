@@ -1,0 +1,176 @@
+services:
+  civic-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: kuvend
+      POSTGRES_PASSWORD: kuvend
+      POSTGRES_DB: kuvend_civic
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kuvend -d kuvend_civic"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - civic-data:/var/lib/postgresql/data
+
+  issuer-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: kuvend
+      POSTGRES_PASSWORD: kuvend
+      POSTGRES_DB: kuvend_issuer
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kuvend -d kuvend_issuer"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - issuer-data:/var/lib/postgresql/data
+
+  admin-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: kuvend
+      POSTGRES_PASSWORD: kuvend
+      POSTGRES_DB: kuvend_admin
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kuvend -d kuvend_admin"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - admin-data:/var/lib/postgresql/data
+
+  notifications-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: kuvend
+      POSTGRES_PASSWORD: kuvend
+      POSTGRES_DB: kuvend_notifications
+    ports:
+      - "5435:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kuvend -d kuvend_notifications"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - notifications-data:/var/lib/postgresql/data
+
+  civic-api:
+    build:
+      context: .
+      dockerfile: apps/civic-api/Dockerfile
+    environment:
+      PORT: 4000
+      SYNTHETIC_ONLY: "true"
+      SYNTHETIC_SIGNING_KEY: development-only-change-me
+      TRANSPARENCY_SIGNING_KEY: development-transparency-key
+      TRANSPARENCY_KEY_EPOCH: synthetic-v1
+      DATABASE_URL: postgres://kuvend:kuvend@civic-db:5432/kuvend_civic
+    ports:
+      - "4000:4000"
+    depends_on:
+      civic-db:
+        condition: service_healthy
+
+  issuer:
+    build:
+      context: .
+      dockerfile: apps/issuer/Dockerfile
+    environment:
+      PORT: 4001
+      SYNTHETIC_ONLY: "true"
+      SYNTHETIC_SIGNING_KEY: development-only-change-me
+      ISSUER_DIGEST_KEY: development-digest-key
+      OTP_PROVIDER: synthetic
+      DATABASE_URL: postgres://kuvend:kuvend@issuer-db:5432/kuvend_issuer
+    ports:
+      - "4001:4001"
+    depends_on:
+      issuer-db:
+        condition: service_healthy
+
+  assistant:
+    build:
+      context: .
+      dockerfile: apps/assistant/Dockerfile
+    environment:
+      PORT: 4002
+      SYNTHETIC_ONLY: "true"
+      CIVIC_API_URL: http://civic-api:4000
+    ports:
+      - "4002:4002"
+    depends_on:
+      civic-api:
+        condition: service_started
+
+  notifications:
+    build:
+      context: .
+      dockerfile: apps/notifications/Dockerfile
+    environment:
+      PORT: 4004
+      ADMIN_API_KEY: development-admin-key
+      DATABASE_URL: postgres://kuvend:kuvend@notifications-db:5432/kuvend_notifications
+      NOTIFICATION_ENCRYPTION_KEY: development-notification-key
+    ports:
+      - "4004:4004"
+    depends_on:
+      notifications-db:
+        condition: service_healthy
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+    environment:
+      PORT: 4003
+      ADMIN_API_KEY: development-admin-key
+      DATABASE_URL: postgres://kuvend:kuvend@admin-db:5432/kuvend_admin
+      CIVIC_API_URL: http://civic-api:4000
+      NOTIFICATIONS_URL: http://notifications:4004
+    ports:
+      - "4003:4003"
+    depends_on:
+      admin-db:
+        condition: service_healthy
+      civic-api:
+        condition: service_started
+      notifications:
+        condition: service_started
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_CIVIC_API_URL: http://localhost:4000
+        NEXT_PUBLIC_ISSUER_URL: http://localhost:4001
+        NEXT_PUBLIC_ASSISTANT_URL: http://localhost:4002
+        NEXT_PUBLIC_NOTIFICATIONS_URL: http://localhost:4004
+        NEXT_PUBLIC_SITE_URL: http://localhost:3000
+    environment:
+      NEXT_PUBLIC_CIVIC_API_URL: http://localhost:4000
+      NEXT_PUBLIC_ISSUER_URL: http://localhost:4001
+      NEXT_PUBLIC_ASSISTANT_URL: http://localhost:4002
+      NEXT_PUBLIC_NOTIFICATIONS_URL: http://localhost:4004
+    ports:
+      - "3000:3000"
+    depends_on:
+      - civic-api
+      - issuer
+      - assistant
+      - notifications
+
+volumes:
+  civic-data:
+  issuer-data:
+  admin-data:
+  notifications-data:

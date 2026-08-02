@@ -1,6 +1,6 @@
 # Contributing
 
-Open Civic is in a threat-model and protocol-design phase. The most useful early contributions are precise attacks, corrections to assumptions, protocol evaluations, operational designs, and accessible explanations.
+Kuvend is in a threat-model, reference-implementation, and protocol-design phase. The most useful early contributions are precise attacks, corrections to assumptions, protocol evaluations, operational designs, accessibility improvements, and clear explanations.
 
 ## Before opening code
 

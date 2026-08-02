@@ -22,6 +22,8 @@ Exit condition: a written protocol and operational design with named assumptions
 
 Exit condition: automated tests show the intended separation, and the repository still states that the implementation is unaudited.
 
+Implemented in the repository: the complete proposal wizard, optional language review, live-catalogue duplicate suggestions, author recovery capabilities, structured evidence, moderation and appeals, arguments, 14-day rounds, final ballots, receipts, closing results, institutional responses, separate administrative audits, SEO/share surfaces, RSS and isolated push notifications. Credentials and public transparency signatures remain deliberately synthetic.
+
 ## Phase 2 — hardened pilot
 
 - reproducible signed client;

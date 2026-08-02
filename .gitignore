@@ -5,4 +5,14 @@
 node_modules/
 dist/
 coverage/
+.next/
+.turbo/
+.playwright-mcp/
+kuvend-mobile.png
+*.tsbuildinfo
 *.log
+
+.env.local
+.pnpm-store/
+
+data/

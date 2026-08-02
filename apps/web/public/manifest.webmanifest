@@ -1,0 +1,10 @@
+{
+  "name": "Kuvend",
+  "short_name": "Kuvend",
+  "description": "Propozime dhe votim këshillues për Shqipërinë",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#001b44",
+  "icons": [{ "src": "/mark.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

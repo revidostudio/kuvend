@@ -1,10 +1,12 @@
-# Open Civic
+# Kuvend
 
-Open Civic is an early-stage, noncommercial public-good project for private civic proposals and voting. Its central design goal is narrow and demanding:
+Kuvend is an early-stage, independent, noncommercial public-good project for private civic proposals and advisory voting concerning Albania. Its central design goal is narrow and demanding:
 
 > The project must not possess, and no project operator should be able to reconstruct, the link between a verified phone number and a proposal or vote.
 
 This repository begins with the threat model and trust boundaries before application code. It does **not** yet provide a safe production system.
+
+The public product will live at **kuvend.org**. It is independent and is not affiliated with the Assembly of Albania, a political party, or a government institution.
 
 ## Non-negotiable commitments
 
@@ -28,15 +30,29 @@ user client -> independent relay -> batch gateway -> civic service
 
 The issuer may learn that a phone was verified. The civic service may learn a proposal or vote. Neither service should receive enough information to join those facts. A separately operated relay hides the participant's network address from the civic service, while batching reduces simple timing correlation.
 
-See [Architecture](docs/architecture.md), [Threat model](docs/threat-model.md), and [Roadmap](docs/roadmap.md).
+See the [Product specification](docs/product-spec.md), [Architecture](docs/architecture.md), [Threat model](docs/threat-model.md), and [Roadmap](docs/roadmap.md).
 
 ## Why Better Auth is not in the anonymous path
 
 Better Auth can be useful for maintainers, sponsor administration, and explicitly nonanonymous profiles. The anonymous participation path should use a small independent issuer because normal account systems intentionally create stable users, sessions, and event records. See [ADR 0002](docs/adr/0002-anonymous-identity.md).
 
-## Project stage
+## What is implemented
 
-The current milestone is **Phase 0: make the promises precise**. Before accepting real phone numbers or civic submissions, the project needs:
+The current milestone is **Phase 1: synthetic local reference system**. It includes:
+
+- a modern, mobile-first Next.js PWA built with shadcn/ui;
+- a six-step proposal wizard with optional AI review, duplicate suggestions, structured evidence links, a final review, and explicit confirmation;
+- proposal moderation, structured arguments, final Support/Oppose voting, inclusion receipts, and public result tracking;
+- private author-capability workflows for revision, withdrawal, appeal, and recovery-secret download;
+- a separate moderation dashboard with two-person high-risk decisions, institutional response tracking, and append-only administrator audits;
+- strict civic API schemas that reject phone numbers and stable participant identifiers;
+- isolated synthetic credential issuance, assistant, administration, and notification services;
+- an issuer-only OTP provider adapter with a minimal Prelude Verify v2 implementation for an approved Albania trial;
+- proposal metadata, social preview images, a sitemap, robots policy, and an RSS feed for discovery and sharing;
+- encrypted, durable web-push subscriptions with topic selection and unsubscribe, without joining notification data to civic identities;
+- PostgreSQL-backed civic records and isolated, expiring OTP challenge digests, with in-memory adapters retained for deterministic tests.
+
+Before accepting real phone numbers or civic submissions, the project still needs:
 
 1. a reviewed adversary and data-flow model;
 2. a standards-based credential protocol selection;
@@ -44,11 +60,19 @@ The current milestone is **Phase 0: make the promises precise**. Before acceptin
 4. independent operators for issuer, relay, and civic service;
 5. external cryptographic, application-security, and operational review.
 
-Do not deploy this repository for sensitive participation yet.
+Do not deploy this repository for sensitive participation yet. The included OTP code and anonymous credential are deliberately synthetic development adapters, not the reviewed production privacy protocol.
 
 ## Development
 
-There is intentionally no production application scaffold yet. Start by reviewing the open design questions in the roadmap and proposing changes through issues or pull requests. Code will be added only after the protocol boundary is accepted.
+The repository contains a synthetic reference implementation. It uses fake credentials and harmless seed proposals so that the complete experience can be tested without real identities or a claim of production anonymity.
+
+```bash
+corepack enable
+pnpm install
+pnpm dev
+```
+
+For the full service topology, use `docker compose up --build`. See [Deployment](docs/deployment.md).
 
 ## Governance and funding
 
@@ -56,4 +80,4 @@ There is intentionally no production application scaffold yet. Start by reviewin
 
 ## License
 
-Copyright (c) 2026 Open Civic contributors. Licensed under the [GNU Affero General Public License v3.0](LICENSE).
+Copyright (c) 2026 Kuvend contributors. Licensed under the [GNU Affero General Public License v3.0](LICENSE).

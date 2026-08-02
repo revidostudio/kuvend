@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Open Civic exists to make civic participation safer, inspectable, independently deployable, and available without payment. It is a public-good software project, not a business.
+Kuvend exists to make civic participation safer, inspectable, independently deployable, and available without payment. It is an independent public-good software project, not a business or government body.
 
 ## Permanent noncommercial promise
 

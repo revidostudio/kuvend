@@ -1,6 +1,6 @@
 instance:
   id: albania-demo
-  name: Open Civic Albania (Demo)
+  name: Kuvend (Synthetic Demo)
   country: AL
   languages:
     - sq
@@ -8,10 +8,18 @@ instance:
   timezone: Europe/Tirane
 
 participation:
+  authority: national_advisory
+  eligibility: verified_international_phone_control
+  credential_epoch_days: 30
   proposals:
-    credential: single_use
+    credential: synthetic_single_use
+    fixed_quota: disabled
   voting:
-    credential: topic_scoped
+    credential: synthetic_topic_scoped
+    duration_days: 14
+    final_after_confirmation: true
+    live_turnout: true
+    split_visibility: after_vote
   attachments: disabled
 
 privacy:
@@ -24,3 +32,7 @@ privacy:
 funding:
   provider: github_sponsors
   influence: none
+
+launch_gate:
+  real_identities: blocked
+  reason: unaudited_credential_protocol_and_no_independent_issuer
