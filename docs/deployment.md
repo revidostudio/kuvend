@@ -14,6 +14,8 @@ The demo may use a single Railway project in a European region with separately c
 
 Suggested demo origins are `kuvend.org`, `api.kuvend.org`, `verify.kuvend.org`, and `admin.kuvend.org`. These subdomains are not sufficient separation for a real privacy claim.
 
+The browser-facing APIs allow localhost and `kuvend.org` origins by default. Temporary preview origins must be listed explicitly in the comma-separated `CORS_ALLOWED_ORIGINS` variable on the civic API, issuer, assistant, and notification services; do not use a wildcard origin. Web-to-service calls use public HTTPS origins, while server-to-service calls and all database connections use Railway private networking and reference variables.
+
 ## Sensitive pilot
 
 The issuer, relay, gateway, civic service, databases, logging, keys, monitoring, backups, accounts, and release authority are separated as described in the architecture. The civic origin accepts traffic only from the OHTTP gateway. No shared trace ID crosses a privacy boundary.
