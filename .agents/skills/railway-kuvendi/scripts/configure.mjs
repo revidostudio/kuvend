@@ -67,6 +67,7 @@ const apps = {
     id: "4815cd9b-0723-40b9-abd5-ee793345a805",
     configFile: "/apps/admin/railway.json",
     domain: "https://admin.kuvend.org",
+    accessProtected: true,
     sleepApplication: true,
     vCPUs: 0.5,
     memoryGB: 0.25,
@@ -223,10 +224,20 @@ async function checkDomains(rows) {
     const live = rows.find((row) => row.name === name);
     const healthUrl = new URL(live?.healthcheckPath ?? "/", service.domain);
     try {
-      const response = await fetch(healthUrl, { signal: AbortSignal.timeout(15_000) });
+      const response = await fetch(healthUrl, {
+        redirect: service.accessProtected ? "manual" : "follow",
+        signal: AbortSignal.timeout(15_000),
+      });
       const message = `${name}: ${response.status} ${healthUrl}`;
-      if (response.ok) console.log(message);
-      else {
+      const accessLocation = response.headers.get("location");
+      const accessProtected =
+        service.accessProtected &&
+        response.status === 302 &&
+        accessLocation &&
+        new URL(accessLocation).hostname.endsWith(".cloudflareaccess.com");
+      if (response.ok || accessProtected) {
+        console.log(accessProtected ? `${message} (Cloudflare Access protected)` : message);
+      } else {
         console.error(message);
         process.exitCode = 1;
       }

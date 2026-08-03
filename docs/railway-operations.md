@@ -49,7 +49,7 @@ All services run one replica in EU West. Current measured memory is below 200 MB
 
 Browser requests use the six custom HTTPS domains. Server-side application calls and all database connections use Railway reference variables and private hostnames. Never replace a private reference with a rendered literal or `DATABASE_PUBLIC_URL`.
 
-Cloudflare proxies the public domains. This is appropriate for the synthetic demo, but it is shared infrastructure and does not satisfy the independent-operator privacy model required for a sensitive pilot. Restrict `admin.kuvend.org` with Cloudflare Access once the allowed maintainer identities are explicitly selected.
+Cloudflare proxies the public domains. This is appropriate for the synthetic demo, but it is shared infrastructure and does not satisfy the independent-operator privacy model required for a sensitive pilot. `admin.kuvend.org` is protected by the Cloudflare Access application `Kuvend Admin`, using the existing `Rodrig only` allow policy. An unauthenticated request must redirect to the `little-surf-992e.cloudflareaccess.com` login page; it must never reach the Railway admin service directly.
 
 ## Production checks
 
@@ -57,7 +57,7 @@ After every infrastructure change:
 
 1. Run `pnpm infra:check`.
 2. Confirm all ten services report a successful deployment.
-3. Confirm the six health URLs return HTTP 200.
+3. Confirm the five public health URLs return HTTP 200 and the admin health URL returns the expected Cloudflare Access login redirect.
 4. Confirm browser CORS from `https://kuvend.org`.
 5. Confirm custom-domain target ports match service `PORT` values.
 6. Confirm only one EU West replica is active.
