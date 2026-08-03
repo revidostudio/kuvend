@@ -62,6 +62,7 @@ export class PostgresCivicStore implements CivicStore {
         body text not null,
         evidence jsonb not null default '[]',
         pseudonym text not null,
+        public_author_name text,
         contribution_nullifier text unique,
         created_at timestamptz not null default now()
       );
@@ -125,6 +126,7 @@ export class PostgresCivicStore implements CivicStore {
       );
       alter table proposals add column if not exists evidence jsonb not null default '[]';
       alter table arguments add column if not exists evidence jsonb not null default '[]';
+      alter table arguments add column if not exists public_author_name text;
       alter table proposals add column if not exists author_capability_hash text;
       alter table arguments add column if not exists contribution_nullifier text;
       alter table proposals add column if not exists revision_number integer not null default 1;
@@ -183,6 +185,7 @@ export class PostgresCivicStore implements CivicStore {
         body: argument.body,
         evidence: this.sql.json(argument.evidence),
         pseudonym: argument.pseudonym,
+        public_author_name: argument.publicAuthorName ?? null,
         created_at: argument.createdAt,
       })}`;
     }
@@ -280,6 +283,9 @@ export class PostgresCivicStore implements CivicStore {
         body: String(argument.body),
         evidence: argument.evidence as ArgumentRecord["evidence"],
         pseudonym: String(argument.pseudonym),
+        ...(argument.public_author_name
+          ? { publicAuthorName: String(argument.public_author_name) }
+          : {}),
         createdAt: new Date(String(argument.created_at)).toISOString(),
       })),
       statusHistory: events.map((event) => ({
@@ -334,13 +340,19 @@ export class PostgresCivicStore implements CivicStore {
       body: input.body,
       evidence: input.evidence,
       pseudonym: pseudonyms[Math.floor(Math.random() * pseudonyms.length)] ?? "Fjala e Lirë",
+      ...(input.publicAuthorName ? { publicAuthorName: input.publicAuthorName } : {}),
       createdAt: new Date().toISOString(),
     };
     await this.sql`insert into arguments ${this.sql({
-      ...argument,
+      id: argument.id,
+      position: argument.position,
+      body: argument.body,
       evidence: this.sql.json(argument.evidence),
+      pseudonym: argument.pseudonym,
+      public_author_name: argument.publicAuthorName ?? null,
       proposal_id: input.proposalId,
       contribution_nullifier: input.contributionNullifier,
+      created_at: argument.createdAt,
     })}`;
     return argument;
   }

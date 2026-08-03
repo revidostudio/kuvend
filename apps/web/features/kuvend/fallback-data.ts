@@ -41,6 +41,31 @@ export const fallbackProposals: ProposalRecord[] = [
     ],
     statusHistory: [
       {
+        status: "pending_review",
+        at: "2026-07-18T09:00:00.000Z",
+        note: "Propozimi u dorëzua për shqyrtim.",
+      },
+      {
+        status: "needs_changes",
+        at: "2026-07-19T09:00:00.000Z",
+        note: "U kërkua të qartësohej institucioni përgjegjës.",
+      },
+      {
+        status: "pending_review",
+        at: "2026-07-20T09:00:00.000Z",
+        note: "Autori dorëzoi versionin e përmirësuar.",
+      },
+      {
+        status: "pending_review",
+        at: "2026-07-21T09:00:00.000Z",
+        note: "Kontrolli i privatësisë u përfundua.",
+      },
+      {
+        status: "pending_review",
+        at: "2026-07-22T09:00:00.000Z",
+        note: "Dy moderatorë konfirmuan vendimin.",
+      },
+      {
         status: "voting_open",
         at: "2026-07-24T09:00:00.000Z",
         note: "Kaloi kontrollin e moderimit.",

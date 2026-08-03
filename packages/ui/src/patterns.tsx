@@ -1,8 +1,21 @@
 "use client";
 
 import * as React from "react";
-import { ArrowLeft, Check, ChevronRight, Info, LockKeyhole, Menu, ShieldCheck } from "lucide-react";
-import { Button, Card, CardContent } from "./primitives";
+import {
+  ArrowLeft,
+  Check,
+  ChevronRight,
+  FileText,
+  Image as ImageIcon,
+  Info,
+  LockKeyhole,
+  Menu,
+  ShieldCheck,
+  UploadCloud,
+  Video,
+  X,
+} from "lucide-react";
+import { Button, Card, CardContent, Progress, ProgressLabel, ProgressValue } from "./primitives";
 import { cn } from "./lib";
 
 export function AppShell({
@@ -204,4 +217,150 @@ export function EmptyState({
       {action}
     </div>
   );
+}
+
+export function FileUploader({
+  id,
+  accept,
+  file,
+  kind,
+  previewUrl,
+  progress = 0,
+  status = "idle",
+  error,
+  onFileSelect,
+  onRemove,
+}: {
+  id: string;
+  accept: string;
+  file: File | null;
+  kind: "document" | "image" | "video";
+  previewUrl?: string;
+  progress?: number;
+  status?: "idle" | "preparing" | "ready" | "uploading" | "complete" | "error";
+  error?: string;
+  onFileSelect: (file: File) => void;
+  onRemove: () => void;
+}) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const statusLabel = {
+    idle: "Zgjidh një skedar",
+    preparing: "Po përgatitet",
+    ready: "Gati për ngarkim",
+    uploading: "Po ngarkohet",
+    complete: "U ngarkua",
+    error: "Nuk mund të ngarkohet",
+  }[status];
+
+  function select(files: FileList | null) {
+    const nextFile = files?.[0];
+    if (nextFile) onFileSelect(nextFile);
+  }
+
+  return (
+    <div data-slot="file-uploader" className="grid gap-3">
+      <input
+        ref={inputRef}
+        id={id}
+        className="sr-only"
+        type="file"
+        accept={accept}
+        onChange={(event) => select(event.currentTarget.files)}
+      />
+      {!file ? (
+        <div
+          className="grid min-h-40 place-items-center gap-3 rounded-lg border border-dashed border-[var(--kuvend-border-strong)] bg-[var(--kuvend-surface-raised)] p-5 text-center"
+          onDragOver={(event) => event.preventDefault()}
+          onDrop={(event) => {
+            event.preventDefault();
+            select(event.dataTransfer.files);
+          }}
+        >
+          <span className="grid size-11 place-items-center rounded-lg bg-[var(--kuvend-surface)] text-[var(--kuvend-ink-soft)]">
+            <UploadCloud className="size-5" aria-hidden="true" />
+          </span>
+          <div className="grid gap-1">
+            <strong className="text-sm text-[var(--kuvend-ink)]">Hidhe skedarin këtu</strong>
+            <span className="text-xs leading-5 text-[var(--kuvend-ink-soft)]">
+              ose zgjidhe nga pajisja jote
+            </span>
+          </div>
+          <Button type="button" variant="outline" onClick={() => inputRef.current?.click()}>
+            Zgjidh skedar
+          </Button>
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-lg border border-[var(--kuvend-border)] bg-[var(--kuvend-surface-raised)]">
+          <div className="relative grid min-h-36 place-items-center overflow-hidden bg-[var(--kuvend-surface)]">
+            {kind === "image" && previewUrl ? (
+              <img
+                src={previewUrl}
+                alt={`Pamje paraprake e ${file.name}`}
+                className="max-h-52 w-full object-contain"
+              />
+            ) : kind === "video" && previewUrl ? (
+              <video
+                src={previewUrl}
+                controls
+                preload="metadata"
+                aria-label={`Pamje paraprake e ${file.name}`}
+                className="max-h-52 w-full"
+              />
+            ) : (
+              <span className="grid justify-items-center gap-2 text-[var(--kuvend-ink-soft)]">
+                {kind === "video" ? (
+                  <Video className="size-9" aria-hidden="true" />
+                ) : kind === "image" ? (
+                  <ImageIcon className="size-9" aria-hidden="true" />
+                ) : (
+                  <FileText className="size-9" aria-hidden="true" />
+                )}
+                <span className="text-xs">Pamja paraprake nuk është e disponueshme</span>
+              </span>
+            )}
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon"
+              className="absolute right-2 top-2"
+              onClick={onRemove}
+              aria-label={`Hiq ${file.name}`}
+            >
+              <X />
+            </Button>
+          </div>
+          <div className="grid gap-3 p-3">
+            <div className="flex min-w-0 items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-[var(--kuvend-ink)]">
+                  {file.name}
+                </p>
+                <p className="text-xs text-[var(--kuvend-ink-soft)]">{formatFileSize(file.size)}</p>
+              </div>
+              <Button type="button" variant="ghost" onClick={() => inputRef.current?.click()}>
+                Zëvendëso
+              </Button>
+            </div>
+            {status !== "idle" && (
+              <Progress value={progress} aria-live="polite" aria-label={`Përparimi i ${file.name}`}>
+                <ProgressLabel>{statusLabel}</ProgressLabel>
+                <ProgressValue>{Math.round(progress)}%</ProgressValue>
+              </Progress>
+            )}
+          </div>
+        </div>
+      )}
+      {error && (
+        <p role="alert" className="text-sm leading-5 text-[var(--kuvend-danger)]">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

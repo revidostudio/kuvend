@@ -2,6 +2,8 @@
 
 Kuvend's public synthetic demo runs in the Railway project `Kuvend`, production environment, with six application services and four isolated Postgres services. The live configuration is intentionally split between versioned application deployment files and Railway environment settings.
 
+The project also has a `staging` environment. Its six application services follow the GitHub `staging` branch and use Railway-generated domains. Production follows `main`. A release is pushed to `staging`, verified there, and then promoted as the same revision through a pull request to `main`.
+
 ## Versioned contract
 
 - `apps/*/railway.json` owns Dockerfile selection, watch paths, deploy healthchecks, timeout, draining, and restart behavior.
@@ -49,7 +51,7 @@ All services run one replica in EU West. Current measured memory is below 200 MB
 
 Browser requests use the six custom HTTPS domains. Server-side application calls and all database connections use Railway reference variables and private hostnames. Never replace a private reference with a rendered literal or `DATABASE_PUBLIC_URL`.
 
-Cloudflare proxies the public domains. This is appropriate for the synthetic demo, but it is shared infrastructure and does not satisfy the independent-operator privacy model required for a sensitive pilot. Restrict `admin.kuvend.org` with Cloudflare Access once the allowed maintainer identities are explicitly selected.
+Cloudflare proxies the public domains. This is appropriate for the synthetic demo, but it is shared infrastructure and does not satisfy the independent-operator privacy model required for a sensitive pilot. `admin.kuvend.org` is protected by the Cloudflare Access application `Kuvend Admin`, using the existing `Rodrig only` allow policy. An unauthenticated request must redirect to the `little-surf-992e.cloudflareaccess.com` login page; it must never reach the Railway admin service directly.
 
 ## Production checks
 
@@ -57,12 +59,20 @@ After every infrastructure change:
 
 1. Run `pnpm infra:check`.
 2. Confirm all ten services report a successful deployment.
-3. Confirm the six health URLs return HTTP 200.
+3. Confirm the five public health URLs return HTTP 200 and the admin health URL returns the expected Cloudflare Access login redirect.
 4. Confirm browser CORS from `https://kuvend.org`.
 5. Confirm custom-domain target ports match service `PORT` values.
 6. Confirm only one EU West replica is active.
 7. Inspect CPU and memory metrics for OOMs or sustained saturation.
 8. Check that no full variable values appeared in logs or task output.
+
+## Promotion workflow
+
+1. Run the repository validation and privacy checks locally.
+2. Push the candidate revision to the GitHub `staging` branch.
+3. Wait for every affected staging deployment to succeed and verify staging health, CORS, and the public proposal flow.
+4. Merge the candidate pull request to `main` without changing the tested revision.
+5. Wait for every affected production deployment and repeat the production checks above.
 
 ## Cost controls
 

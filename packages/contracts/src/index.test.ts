@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { castBallotSchema, createProposalSchema } from "./index.js";
+import { castBallotSchema, createArgumentSchema, createProposalSchema } from "./index.js";
 
 const baseProposal = {
   title: "Ndriçim më i mirë pranë shkollave",
@@ -30,5 +30,21 @@ describe("privacy-boundary contracts", () => {
       userId: "stable-user",
     });
     expect(result.success).toBe(false);
+  });
+
+  it("allows an optional unverified display name on an argument but rejects identity fields", () => {
+    const baseArgument = {
+      proposalId: crypto.randomUUID(),
+      position: "for",
+      body: "Ky argument shpjegon qartë një arsye publike.",
+      evidence: [],
+      publicAuthorName: "Arta",
+      credential: "synthetic.credential.value",
+      contributionNullifier: "d".repeat(64),
+    };
+    expect(createArgumentSchema.safeParse(baseArgument).success).toBe(true);
+    expect(
+      createArgumentSchema.safeParse({ ...baseArgument, phone: "+355690000000" }).success,
+    ).toBe(false);
   });
 });

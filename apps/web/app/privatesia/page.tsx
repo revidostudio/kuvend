@@ -12,6 +12,13 @@ export default function PrivacyPage() {
       title="Privatësia"
       lead="Kuvend është projektuar që shërbimi qytetar të mos marrë numrin tënd të telefonit ose një identifikues të qëndrueshëm qytetar."
     >
+      <h2 id="si-mbrohet-vota">Si mbrohet vota pa emër</h2>
+      <p>
+        Procesi ndahet në shërbime që nuk marrin të njëjtin informacion. Shërbimi i verifikimit
+        kontrollon përkohësisht numrin dhe lëshon një dëshmi anonime. Shërbimi qytetar merr vetëm
+        dëshminë dhe një shenjë unike për propozimin; ai nuk merr numrin e telefonit. Fleta e votës
+        ruhet me një mandat përfshirjeje që mbahet nga pjesëmarrësi.
+      </p>
       <h2>Çfarë përpunohet</h2>
       <p>
         Propozimet, argumentet dhe votat përpunohen nga shërbimi qytetar. Numri përpunohet
