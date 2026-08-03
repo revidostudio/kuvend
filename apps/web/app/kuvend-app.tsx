@@ -1,6 +1,12 @@
 "use client";
 
-import type { ArgumentRecord, EvidenceItem, ProposalRecord, VoteChoice } from "@kuvend/contracts";
+import {
+  isPublicProposalStatus,
+  type ArgumentRecord,
+  type EvidenceItem,
+  type ProposalRecord,
+  type VoteChoice,
+} from "@kuvend/contracts";
 import {
   Alert,
   AlertDescription,
@@ -173,7 +179,9 @@ export function KuvendApp({
     if (!civicUrl) return;
     fetch(`${civicUrl}/v1/proposals`)
       .then((response) => (response.ok ? response.json() : Promise.reject()))
-      .then((data: { proposals: ProposalRecord[] }) => setProposals(data.proposals))
+      .then((data: { proposals: ProposalRecord[] }) =>
+        setProposals(data.proposals.filter((proposal) => isPublicProposalStatus(proposal.status))),
+      )
       .catch(() => undefined);
   }, []);
 
@@ -474,7 +482,6 @@ export function KuvendApp({
                 >
                   <option value="">Çdo status</option>
                   <option value="voting_open">Votimi i hapur</option>
-                  <option value="pending_review">Në shqyrtim</option>
                   <option value="voting_closed">Votimi i mbyllur</option>
                   <option value="awaiting_response">Në pritje të përgjigjes</option>
                   <option value="responded">Me përgjigje</option>
@@ -996,7 +1003,6 @@ export function KuvendApp({
               >
                 <option value="">Çdo status</option>
                 <option value="voting_open">Votimi i hapur</option>
-                <option value="pending_review">Në shqyrtim</option>
                 <option value="voting_closed">Votimi i mbyllur</option>
                 <option value="awaiting_response">Në pritje të përgjigjes</option>
                 <option value="responded">Me përgjigje</option>

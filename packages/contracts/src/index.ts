@@ -14,6 +14,19 @@ export const proposalStatuses = [
 ] as const;
 
 export const proposalStatusSchema = z.enum(proposalStatuses);
+export const publicProposalStatuses = [
+  "voting_open",
+  "voting_closed",
+  "awaiting_response",
+  "responded",
+  "no_response",
+] as const satisfies readonly (typeof proposalStatuses)[number][];
+
+export function isPublicProposalStatus(
+  status: (typeof proposalStatuses)[number],
+): status is (typeof publicProposalStatuses)[number] {
+  return (publicProposalStatuses as readonly string[]).includes(status);
+}
 export const voteChoiceSchema = z.enum(["support", "oppose"]);
 export const argumentPositionSchema = z.enum(["for", "against"]);
 export const scopeSchema = z.enum(["national", "local"]);
