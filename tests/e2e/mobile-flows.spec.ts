@@ -99,6 +99,93 @@ test("mobile detail respects browser back and overlays use the bottom edge", asy
   await expectMobileSheet(page);
 });
 
+test("proposal research waits for consent and opens only public provider actions", async ({
+  page,
+}, testInfo) => {
+  await page.addInitScript(() => {
+    const state = window as typeof window & {
+      __externalResearch?: { urls: string[]; prompt: string };
+    };
+    state.__externalResearch = { urls: [], prompt: "" };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (value: string) => {
+          state.__externalResearch!.prompt = value;
+        },
+      },
+    });
+    HTMLAnchorElement.prototype.click = function click() {
+      state.__externalResearch!.urls.push(this.href);
+    };
+  });
+  await page.goto("/");
+  await page.locator(".proposal-card").first().click();
+
+  expect(
+    await page.evaluate(
+      () =>
+        (window as typeof window & { __externalResearch?: { urls: string[] } }).__externalResearch
+          ?.urls.length,
+    ),
+  ).toBe(0);
+
+  await page.getByRole("button", { name: "Hulumto me AI ose Google" }).click();
+  await expect(page.getByText(/Ai mund të shohë adresën tënde IP/)).toBeVisible();
+  if ((testInfo.project.use.viewport?.width ?? 1000) < 640) await expectMobileSheet(page);
+  await page.getByRole("button", { name: /Pyet ChatGPT/ }).click();
+
+  const chatGptState = await page.evaluate(
+    () =>
+      (
+        window as typeof window & {
+          __externalResearch?: { urls: string[]; prompt: string };
+        }
+      ).__externalResearch,
+  );
+  expect(chatGptState?.urls).toHaveLength(1);
+  const chatGptUrl = new URL(chatGptState?.urls[0] ?? "about:blank");
+  expect(chatGptUrl.origin).toBe("https://chatgpt.com");
+  expect(chatGptUrl.searchParams.get("q")).toContain("Mos e trajto asnjë pretendim si fakt");
+  expect(chatGptUrl.searchParams.get("q")).toContain("/propozime/me-shume-hije");
+  expect(chatGptState?.prompt).toContain("Mos e trajto asnjë pretendim si fakt");
+  expect(chatGptState?.prompt).toContain("/propozime/me-shume-hije");
+  expect(chatGptState?.prompt).not.toMatch(/phone|otp|credential|receipt|nullifier/i);
+
+  await page.getByRole("button", { name: "Hulumto me AI ose Google" }).click();
+  await page.getByRole("button", { name: /Kërko në Google/ }).click();
+  const urls = await page.evaluate(
+    () =>
+      (window as typeof window & { __externalResearch?: { urls: string[] } }).__externalResearch
+        ?.urls,
+  );
+  expect(urls?.[1]).toMatch(/^https:\/\/www\.google\.com\/search\?q=/);
+  expect(decodeURIComponent(urls?.[1] ?? "")).toContain("Më shumë hije");
+});
+
+test("direct research link remains complete when clipboard access fails", async ({ page }) => {
+  await page.addInitScript(() => {
+    const state = window as typeof window & { __researchUrl?: string };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async () => Promise.reject(new Error("blocked")) },
+    });
+    HTMLAnchorElement.prototype.click = function click() {
+      state.__researchUrl = this.href;
+    };
+  });
+  await page.goto("/");
+  await page.locator(".proposal-card").first().click();
+  await page.getByRole("button", { name: "Hulumto me AI ose Google" }).click();
+  await page.getByRole("button", { name: /Pyet Claude/ }).click();
+  const directUrl = await page.evaluate(
+    () => (window as typeof window & { __researchUrl?: string }).__researchUrl,
+  );
+  const claudeUrl = new URL(directUrl ?? "about:blank");
+  expect(claudeUrl.origin).toBe("https://claude.ai");
+  expect(claudeUrl.searchParams.get("q")).toContain("Më shumë hije në stacionet e autobusëve");
+});
+
 test("mobile vote completes OTP, final confirmation, result and receipt", async ({
   page,
 }, testInfo) => {
@@ -120,13 +207,22 @@ test("mobile vote completes OTP, final confirmation, result and receipt", async 
   await page.locator(".proposal-card").first().click();
   await page.getByRole("button", { name: "Mbështes" }).click();
   await expectMobileSheet(page);
+  await expect(page.getByText("Kufiri i privatësisë")).toBeVisible();
+  await expect(page.getByText("OTP provon vetëm kontrollin e numrit.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Lexo shpjegimin e plotë" })).toHaveAttribute(
+    "href",
+    "/privatesia#si-mbrohet-vota",
+  );
   await completeOtp(page);
 
   const confirm = page.getByRole("button", { name: "Konfirmo votën përfundimtare" });
   await expect(confirm).toBeVisible();
+  await expect(page.getByText("Gati për konfirmim")).toBeVisible();
+  await expect(page.getByText(/Numri yt nuk dërgohet me votën/)).toBeVisible();
   await confirm.click();
   await expect(page.getByRole("heading", { name: "Vota u përfshi" })).toBeVisible();
   await expect(page.getByText("mobile-inclusion-receipt")).toBeVisible();
+  await expect(page.getByText(/Mandati kontrollon përfshirjen/)).toBeVisible();
   expect(ballotPayload).toMatchObject({
     choice: "support",
     credential: "mobile-synthetic-credential",
@@ -213,7 +309,10 @@ test("mobile argument keeps its evidence across OTP and publishes without identi
   await page.getByLabel("Skedari").setInputFiles({
     name: "stacioni.png",
     mimeType: "image/png",
-    buffer: Buffer.from("pamje-test"),
+    buffer: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+      "base64",
+    ),
   });
   await expect(page.getByAltText("Pamje paraprake e stacioni.png")).toBeVisible();
   await expect(page.getByRole("progressbar", { name: "Përparimi i stacioni.png" })).toHaveAttribute(
@@ -258,11 +357,7 @@ test("mobile notifications and privacy details remain optional and identity-free
 }, testInfo) => {
   mobileOnly(testInfo.project.use.viewport?.width);
   await page.goto("/");
-  await page.getByRole("button", { name: "Hap menunë" }).click();
-  await page
-    .getByRole("navigation", { name: "Menuja celulare" })
-    .getByRole("button", { name: "Njoftimet" })
-    .click();
+  await page.getByRole("button", { name: "Njoftimet", exact: true }).click();
   await expectMobileSheet(page);
   await expect(page.getByText("Pa profil anëtari")).toBeVisible();
   await expect(page.getByRole("link", { name: "RSS-in publik" })).toHaveAttribute(
@@ -292,18 +387,38 @@ test("mobile notifications and privacy details remain optional and identity-free
   await expect(page.getByRole("heading", { name: "Si mbrohet vota pa emër" })).toBeVisible();
 });
 
-test("mobile section navigation honors reduced motion", async ({ page }, testInfo) => {
+test("mobile navigation uses the same destinations and marks the active page", async ({
+  page,
+}, testInfo) => {
   mobileOnly(testInfo.project.use.viewport?.width);
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await page.getByRole("button", { name: "Hap menunë" }).click();
-  await page
-    .getByRole("navigation", { name: "Menuja celulare" })
-    .getByRole("link", { name: "Si funksionon" })
-    .click();
-  await expect(page).toHaveURL(/#si-funksionon$/);
-  await expect(page.getByRole("heading", { name: "Nga ideja te përgjigjja" })).toBeVisible();
-  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  let mobileNavigation = page.getByRole("navigation", { name: "Menuja celulare" });
+  await expect(mobileNavigation).toBeVisible();
+  await mobileNavigation.getByRole("link", { name: "Si funksionon" }).click();
+  await expect(page).toHaveURL(/\/si-funksionon$/);
+  await expect(page.getByRole("heading", { name: "Si funksionon", level: 1 })).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "Hap menunë" }).click();
+  mobileNavigation = page.getByRole("navigation", { name: "Menuja celulare" });
+  await expect(mobileNavigation).toBeVisible();
+  await expect(mobileNavigation.getByRole("link", { name: "Si funksionon" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+});
+
+test("header actions from detail pages open the matching home flow", async ({ page }, testInfo) => {
+  mobileOnly(testInfo.project.use.viewport?.width);
+  await page.goto("/besimi");
+  await page.getByRole("link", { name: "Propozo" }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("heading", { name: "Jepi një titull" })).toBeVisible();
+  await page.getByRole("button", { name: "Mbyll" }).click();
+  await page.goto("/besimi");
+  await page.getByRole("link", { name: "Njoftimet" }).click();
+  await expect(page.getByText("Pa profil anëtari")).toBeVisible();
 });
 
 test("long proposal history starts compact and can reveal every event", async ({
@@ -319,5 +434,59 @@ test("long proposal history starts compact and can reveal every event", async ({
   await expect(page.getByRole("button", { name: "Shfaq vetëm ngjarjet e fundit" })).toHaveAttribute(
     "aria-expanded",
     "true",
+  );
+});
+
+test("vote steps open in place and return focus to the proposal", async ({ page }, testInfo) => {
+  mobileOnly(testInfo.project.use.viewport?.width);
+  await page.goto("/");
+  await page.locator(".proposal-card").first().click();
+  const originalUrl = page.url();
+  const stepsButton = page.getByRole("button", { name: "Hapat" });
+  await stepsButton.click();
+  await expect(page.getByRole("heading", { name: "Si funksionon vota" })).toBeVisible();
+  await expect(page.getByRole("dialog").getByRole("listitem")).toHaveCount(5);
+  expect(page.url()).toBe(originalUrl);
+  await page.getByRole("button", { name: "E kuptova" }).click();
+  await expect(stepsButton).toBeFocused();
+});
+
+test("arguments stay balanced and the full list opens on demand", async ({ page }, testInfo) => {
+  mobileOnly(testInfo.project.use.viewport?.width);
+  await page.goto("/");
+  await page.locator(".proposal-card").first().click();
+  await expect(page.getByRole("heading", { name: "Argumentet" })).toBeVisible();
+  await expect(page.locator(".argument-preview-grid .argument-card")).toHaveCount(2);
+  await page.getByRole("button", { name: "Shiko të gjitha 4 argumentet" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("heading", { name: "Të gjitha argumentet" })).toBeVisible();
+  await expect(dialog.locator(".argument-card")).toHaveCount(4);
+  await expectMobileSheet(page);
+});
+
+test("closed proposals have a visible URL-backed filter and public result", async ({
+  page,
+}, testInfo) => {
+  mobileOnly(testInfo.project.use.viewport?.width);
+  await page.goto("/");
+  await page.evaluate(() => document.getElementById("propozimet")?.scrollIntoView());
+  await expect(page.getByRole("group", { name: "Statuset kryesore" })).toBeVisible();
+  await page
+    .getByRole("group", { name: "Statuset kryesore" })
+    .getByRole("button", { name: "Mbyllur", exact: true })
+    .click();
+  await expect(page).toHaveURL(/status=voting_closed/);
+  await expect(page.locator(".proposal-card")).toHaveCount(1);
+  await page.locator(".proposal-card").click();
+  await expect(page.getByText("77% mbështesin")).toBeVisible();
+  await expect(page.getByRole("article").getByText("312 pjesëmarrës")).toBeVisible();
+});
+
+test("process summary uses icons and links to the complete explanation", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator(".step-marker svg")).toHaveCount(4);
+  await expect(page.getByRole("link", { name: /Shiko shpjegimin e plotë/ })).toHaveAttribute(
+    "href",
+    "/si-funksionon",
   );
 });
