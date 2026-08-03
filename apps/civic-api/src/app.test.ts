@@ -200,4 +200,26 @@ describe("civic API", () => {
     expect(after.json().signature).toBeTruthy();
     await app.close();
   });
+
+  it("publishes an optional unverified name on an argument", async () => {
+    const store = new MemoryCivicStore();
+    const app = buildApp(store);
+    const proposal = (await store.list()).find((item) => item.status === "voting_open")!;
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/arguments",
+      payload: {
+        proposalId: proposal.id,
+        position: "for",
+        body: "Ky argument shpjegon qartë një përfitim publik.",
+        evidence: [],
+        publicAuthorName: "Arta Testuese",
+        credential: issueSyntheticCredential("development-only-change-me"),
+        contributionNullifier: "e".repeat(64),
+      },
+    });
+    expect(response.statusCode).toBe(201);
+    expect(response.json().argument.publicAuthorName).toBe("Arta Testuese");
+    await app.close();
+  });
 });

@@ -23,9 +23,20 @@ describe("design-system compliance fixtures", () => {
       'import { DialogContent } from "@kuvend/ui"; export const A=()=> <DialogContent />;',
     ],
     ["browser-sdk", 'import posthog from "posthog-js";'],
+    [
+      "field-group-contract",
+      "export const A=()=> <fieldset><legend>Prova</legend><p>Prova</p></fieldset>;",
+    ],
   ])("rejects %s", (rule, source) =>
     expect(checkTypescript(source, "apps/web/bad.tsx").map((item) => item.rule)).toContain(rule),
   );
+  it("accepts a fieldset with the repository field contract", () =>
+    expect(
+      checkTypescript(
+        'import { FieldLegend, FieldDescription } from "@kuvend/ui"; export const A=()=> <fieldset aria-describedby="help"><FieldLegend>Prova</FieldLegend><FieldDescription id="help">Shto material.</FieldDescription></fieldset>;',
+        "apps/web/good-fieldset.tsx",
+      ),
+    ).toEqual([]));
   it("rejects raw CSS colors", () =>
     expect(checkCss(".bad{color:#fff}", "apps/web/bad.css")[0]?.rule).toBe("raw-color"));
 });

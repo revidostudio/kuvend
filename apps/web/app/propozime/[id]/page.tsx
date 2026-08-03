@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { KuvendApp } from "../../kuvend-app";
 import { publicProposalPreviews } from "../../seo-data";
+import { extractProposalId, proposalPath, proposalSegment } from "../../proposal-url";
 
 const civicUrl =
   process.env.CIVIC_API_URL ?? process.env.NEXT_PUBLIC_CIVIC_API_URL ?? "http://localhost:4000";
@@ -15,7 +16,7 @@ interface ProposalPreview {
 }
 
 export function generateStaticParams() {
-  return publicProposalPreviews.map(({ id }) => ({ id }));
+  return publicProposalPreviews.map((proposal) => ({ id: proposalSegment(proposal) }));
 }
 
 async function getProposal(id: string): Promise<ProposalPreview | undefined> {
@@ -34,29 +35,37 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const proposal = await getProposal(id);
+  const proposalId = extractProposalId(id);
+  const proposal = await getProposal(proposalId);
   if (!proposal) return { title: "Propozimi nuk u gjet — Kuvend", robots: { index: false } };
   const title = `${proposal.title} — Kuvend`;
   const description = `${proposal.summary} Votim kombëtar këshillues me pjesëmarrje të verifikuar me telefon.`;
   return {
     title,
     description,
-    alternates: { canonical: `/propozime/${id}` },
-    openGraph: { title, description, url: `/propozime/${id}`, type: "article", locale: "sq_AL" },
+    alternates: { canonical: proposalPath(proposal) },
+    openGraph: {
+      title,
+      description,
+      url: proposalPath(proposal),
+      type: "article",
+      locale: "sq_AL",
+    },
     twitter: { card: "summary_large_image", title, description },
   };
 }
 
 export default async function ProposalPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const proposal = await getProposal(id);
+  const proposalId = extractProposalId(id);
+  const proposal = await getProposal(proposalId);
   const structuredData = proposal
     ? {
         "@context": "https://schema.org",
         "@type": "DiscussionForumPosting",
         headline: proposal.title,
         description: proposal.summary,
-        url: `https://kuvend.org/propozime/${id}`,
+        url: `https://kuvend.org${proposalPath(proposal)}`,
         inLanguage: "sq-AL",
         author: { "@type": "Person", name: proposal.pseudonym ?? "Pjesëmarrës anonim" },
         ...(proposal.votingRound?.opensAt || proposal.opensAt
@@ -67,7 +76,7 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
     : null;
   return (
     <>
-      <KuvendApp initialSelectedId={id} />
+      <KuvendApp initialSelectedId={proposalId} />
       {structuredData && (
         <script
           type="application/ld+json"

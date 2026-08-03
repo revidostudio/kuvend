@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { publicProposalPreviews } from "../../seo-data";
+import { extractProposalId } from "../../proposal-url";
 
 export const alt = "Propozim në Kuvend";
 export const size = { width: 1200, height: 630 };
@@ -14,10 +15,13 @@ export default async function ProposalOpenGraphImage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  let proposal = publicProposalPreviews.find((item) => item.id === id) as
+  const proposalId = extractProposalId(id);
+  let proposal = publicProposalPreviews.find((item) => item.id === proposalId) as
     { title: string; summary: string } | undefined;
   try {
-    const response = await fetch(`${civicUrl}/v1/proposals/${id}`, { next: { revalidate: 300 } });
+    const response = await fetch(`${civicUrl}/v1/proposals/${proposalId}`, {
+      next: { revalidate: 300 },
+    });
     if (response.ok) proposal = (await response.json()).proposal;
   } catch {}
   return new ImageResponse(

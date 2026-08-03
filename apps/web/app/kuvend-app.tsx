@@ -8,6 +8,7 @@ import {
   Badge,
   Button,
   Checkbox,
+  ChoiceButton,
   Dialog as ShadDialog,
   DialogContent,
   DialogDescription,
@@ -17,12 +18,14 @@ import {
   FieldDescription,
   FieldGroup,
   FieldLabel,
+  FieldLegend,
   Input,
   Label,
   NativeSelect,
   Progress,
   ProgressLabel,
   ProgressValue,
+  SearchField,
   Select,
   SelectContent,
   SelectGroup,
@@ -42,15 +45,23 @@ import {
   Menu,
   MessageSquareText,
   Plus,
-  Search,
   Share2,
   ShieldCheck,
   Users,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { EvidenceEditor, EvidenceList } from "../features/kuvend/evidence";
+import {
+  defaultDisplayPreference,
+  DisplayPreferenceEditor,
+  displayPreferenceLabel,
+  readDisplayPreference,
+  saveDisplayPreference,
+  type DisplayPreference,
+} from "../features/kuvend/display-preference";
 import { fallbackProposals } from "../features/kuvend/fallback-data";
+import { extractProposalId, proposalPath } from "./proposal-url";
 
 const civicUrl = process.env.NEXT_PUBLIC_CIVIC_API_URL ?? "";
 const issuerUrl = process.env.NEXT_PUBLIC_ISSUER_URL ?? "http://localhost:4001";
@@ -71,6 +82,7 @@ export const fallback = fallbackProposals;
 
 type Dialog =
   "proposal" | "argument" | "notification" | "otp" | "receipt" | "recovery" | "manage" | null;
+type SectionId = "propozimet" | "si-funksionon" | "transparenca";
 type Draft = {
   title: string;
   problem: string;
@@ -103,6 +115,9 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
   const [proposals, setProposals] = useState<ProposalRecord[]>(fallback);
   const [selectedId, setSelectedId] = useState(initialSelectedId ?? "");
   const [query, setQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [historyExpanded, setHistoryExpanded] = useState(false);
   const [dialog, setDialog] = useState<Dialog>(null);
   const [pendingVote, setPendingVote] = useState<VoteChoice | null>(null);
   const [result, setResult] = useState<{ support: number; oppose: number; turnout: number } | null>(
@@ -116,6 +131,8 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
   const [authorCapability, setAuthorCapability] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [displayNow, setDisplayNow] = useState<number | null>(null);
+  const [activeSection, setActiveSection] = useState<SectionId>("propozimet");
+  const navigationTarget = useRef<SectionId | null>(null);
 
   useEffect(() => {
     setDisplayNow(Date.now());
@@ -127,16 +144,67 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
       .catch(() => undefined);
   }, []);
 
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (navigationTarget.current) {
+          const reachedTarget = entries.find(
+            (entry) => entry.isIntersecting && entry.target.id === navigationTarget.current,
+          );
+          if (!reachedTarget) return;
+          navigationTarget.current = null;
+        }
+        const visibleEntry = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visibleEntry) {
+          setActiveSection(visibleEntry.target.id as SectionId);
+        }
+      },
+      { rootMargin: "-20% 0px -55%", threshold: [0, 0.2, 0.5] },
+    );
+    for (const id of ["propozimet", "si-funksionon", "transparenca"]) {
+      const section = document.getElementById(id);
+      if (section) observer.observe(section);
+    }
+    const initialSection = window.location.hash.slice(1) as SectionId;
+    if (["propozimet", "si-funksionon", "transparenca"].includes(initialSection)) {
+      requestAnimationFrame(() => navigateToSection(initialSection, false));
+    }
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const syncLocation = () => {
+      const searchParams = new URLSearchParams(window.location.search);
+      setQuery(searchParams.get("q") ?? "");
+      setCategoryFilter(searchParams.get("category") ?? "");
+      setStatusFilter(searchParams.get("status") ?? "");
+      const proposalMatch = window.location.pathname.match(/^\/propozime\/([^/]+)$/);
+      setSelectedId(proposalMatch?.[1] ? extractProposalId(proposalMatch[1]) : "");
+    };
+    syncLocation();
+    window.addEventListener("popstate", syncLocation);
+    return () => window.removeEventListener("popstate", syncLocation);
+  }, []);
+
   const visible = useMemo(
     () =>
-      proposals.filter((proposal) =>
-        `${proposal.title} ${proposal.summary}`
-          .toLocaleLowerCase("sq-AL")
-          .includes(query.toLocaleLowerCase("sq-AL")),
+      proposals.filter(
+        (proposal) =>
+          `${proposal.title} ${proposal.summary}`
+            .toLocaleLowerCase("sq-AL")
+            .includes(query.toLocaleLowerCase("sq-AL")) &&
+          (!categoryFilter || proposal.category === categoryFilter) &&
+          (!statusFilter || proposal.status === statusFilter),
       ),
-    [proposals, query],
+    [categoryFilter, proposals, query, statusFilter],
   );
-  const selected = proposals.find((proposal) => proposal.id === selectedId) ?? proposals[0]!;
+  const selected =
+    visible.find((proposal) => proposal.id === selectedId) ??
+    visible[0] ??
+    proposals.find((proposal) => proposal.id === selectedId) ??
+    proposals[0]!;
   const voted = Boolean(result);
 
   useEffect(() => {
@@ -144,7 +212,13 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
     setReceipt(localStorage.getItem(`kuvend.receipt.${selected.id}`) ?? "");
     setResult(null);
     setPendingVote(null);
+    setHistoryExpanded(false);
   }, [selected.id]);
+
+  const visibleHistory = historyExpanded
+    ? selected.statusHistory
+    : selected.statusHistory.slice(-4);
+  const hiddenHistoryCount = selected.statusHistory.length - visibleHistory.length;
 
   function beginVote(choice: VoteChoice) {
     setPendingVote(choice);
@@ -152,6 +226,56 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
       setAfterOtp("vote");
       setDialog("otp");
     }
+  }
+
+  function updateQuery(nextQuery: string) {
+    setQuery(nextQuery);
+    const url = new URL(window.location.href);
+    if (nextQuery.trim()) url.searchParams.set("q", nextQuery);
+    else url.searchParams.delete("q");
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+  }
+
+  function updateFilter(
+    name: "category" | "status",
+    value: string,
+    updateState: (value: string) => void,
+  ) {
+    updateState(value);
+    const url = new URL(window.location.href);
+    if (value) url.searchParams.set(name, value);
+    else url.searchParams.delete(name);
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+  }
+
+  function replacePath(pathname: string) {
+    const url = new URL(window.location.href);
+    url.pathname = pathname;
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+  }
+
+  function openProposal(pathname: string) {
+    const url = new URL(window.location.href);
+    url.pathname = pathname;
+    window.history.pushState(
+      { kuvendView: "proposal" },
+      "",
+      `${url.pathname}${url.search}${url.hash}`,
+    );
+  }
+
+  function navigateToSection(sectionId: SectionId, updateHistory = true) {
+    navigationTarget.current = sectionId;
+    setActiveSection(sectionId);
+    if (updateHistory) {
+      const url = new URL(window.location.href);
+      url.hash = sectionId;
+      window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    }
+    document.getElementById(sectionId)?.scrollIntoView({
+      block: "start",
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    });
   }
 
   async function castVote(activeCredential = credential) {
@@ -188,7 +312,7 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
   }
 
   async function shareProposal() {
-    const url = `${location.origin}/propozime/${selected.id}`;
+    const url = `${location.origin}${proposalPath(selected)}`;
     if (navigator.share)
       await navigator.share({
         title: selected.title,
@@ -209,17 +333,46 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
           <span>Kuvend</span>
         </a>
         <nav aria-label="Kryesor">
-          <a href="#propozimet">Propozimet</a>
-          <a href="#si-funksionon">Si funksionon</a>
-          <a href="#transparenca">Transparenca</a>
+          <a
+            href="#propozimet"
+            aria-current={activeSection === "propozimet" ? "location" : undefined}
+            onClick={(event) => {
+              event.preventDefault();
+              navigateToSection("propozimet");
+            }}
+          >
+            Propozimet
+          </a>
+          <a
+            href="#si-funksionon"
+            aria-current={activeSection === "si-funksionon" ? "location" : undefined}
+            onClick={(event) => {
+              event.preventDefault();
+              navigateToSection("si-funksionon");
+            }}
+          >
+            Si funksionon
+          </a>
+          <a
+            href="#transparenca"
+            aria-current={activeSection === "transparenca" ? "location" : undefined}
+            onClick={(event) => {
+              event.preventDefault();
+              navigateToSection("transparenca");
+            }}
+          >
+            Transparenca
+          </a>
         </nav>
         <Button
           variant="ghost"
-          size="sm"
+          size="icon"
           className="notification-link"
+          aria-label="Njoftimet"
+          title="Njoftimet"
           onClick={() => setDialog("notification")}
         >
-          <Bell data-icon="inline-start" /> Njoftimet
+          <Bell />
         </Button>
         <Button
           size="lg"
@@ -243,10 +396,26 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
       </header>
       {menuOpen && (
         <nav className="mobile-menu" aria-label="Menuja celulare">
-          <a href="#propozimet" onClick={() => setMenuOpen(false)}>
+          <a
+            href="#propozimet"
+            aria-current={activeSection === "propozimet" ? "location" : undefined}
+            onClick={(event) => {
+              event.preventDefault();
+              navigateToSection("propozimet");
+              setMenuOpen(false);
+            }}
+          >
             Propozimet
           </a>
-          <a href="#si-funksionon" onClick={() => setMenuOpen(false)}>
+          <a
+            href="#si-funksionon"
+            aria-current={activeSection === "si-funksionon" ? "location" : undefined}
+            onClick={(event) => {
+              event.preventDefault();
+              navigateToSection("si-funksionon");
+              setMenuOpen(false);
+            }}
+          >
             Si funksionon
           </a>
           <Button
@@ -296,7 +465,7 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
                 <Plus data-icon="inline-start" /> Bëj një propozim
               </Button>
               <a className="text-link" href="#si-funksionon">
-                Shih si funksionon <ChevronRight size={18} />
+                Si funksionon <ChevronRight size={18} />
               </a>
             </div>
           </div>
@@ -308,6 +477,9 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
                 Telefoni verifikohet nga një shërbim i izoluar. Shërbimi i votimit nuk e merr
                 numrin.
               </p>
+              <a className="trust-link" href="/privatesia#si-mbrohet-vota">
+                Si mbrohet privatësia <ChevronRight size={16} />
+              </a>
             </div>
           </aside>
         </section>
@@ -316,20 +488,56 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
           <div className="section-heading">
             <div>
               <span className="eyebrow">Ide, votime dhe rezultate</span>
-              <h2>Propozimet</h2>
+              <div className="proposal-heading-line">
+                <h2>Propozimet</h2>
+                <span className="proposal-count" aria-label={`${visible.length} propozime`}>
+                  {visible.length}
+                </span>
+              </div>
             </div>
-            <div className="search">
-              <Search size={18} />
-              <Input
+            <div className="proposal-filters">
+              <SearchField
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(event) => updateQuery(event.target.value)}
                 aria-label="Kërko propozime"
                 placeholder="Kërko propozime"
               />
+              <NativeSelect
+                value={categoryFilter}
+                aria-label="Filtro sipas kategorisë"
+                onChange={(event) =>
+                  updateFilter("category", event.target.value, setCategoryFilter)
+                }
+              >
+                <option value="">Të gjitha kategoritë</option>
+                {Object.entries(categoryLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </NativeSelect>
+              <NativeSelect
+                value={statusFilter}
+                aria-label="Filtro sipas statusit"
+                onChange={(event) => updateFilter("status", event.target.value, setStatusFilter)}
+              >
+                <option value="">Të gjitha statuset</option>
+                <option value="voting_open">Votimi i hapur</option>
+                <option value="pending_review">Në shqyrtim</option>
+                <option value="voting_closed">Votimi i mbyllur</option>
+                <option value="awaiting_response">Në pritje të përgjigjes</option>
+                <option value="responded">Me përgjigje</option>
+              </NativeSelect>
             </div>
           </div>
           <div className="proposal-grid">
             <div className={`proposal-list ${selectedId ? "has-selection" : ""}`}>
+              {visible.length === 0 && (
+                <div className="proposal-empty" role="status">
+                  Nuk u gjet asnjë propozim me këta filtra. Ndrysho kërkimin, kategorinë ose
+                  statusin.
+                </div>
+              )}
               {visible.map((proposal) => (
                 <Button
                   variant="ghost"
@@ -337,7 +545,7 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
                   className={`proposal-card ${proposal.id === selected.id ? "active" : ""}`}
                   onClick={() => {
                     setSelectedId(proposal.id);
-                    history.replaceState(null, "", `/propozime/${proposal.id}`);
+                    openProposal(proposalPath(proposal));
                     setResult(null);
                     requestAnimationFrame(() =>
                       document.querySelector(".proposal-area")?.scrollIntoView({ block: "start" }),
@@ -378,8 +586,11 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
                 variant="ghost"
                 className="mobile-back"
                 onClick={() => {
-                  setSelectedId("");
-                  history.replaceState(null, "", "/");
+                  if (window.history.state?.kuvendView === "proposal") window.history.back();
+                  else {
+                    setSelectedId("");
+                    replacePath("/");
+                  }
                   requestAnimationFrame(() =>
                     document.querySelector(".proposal-area")?.scrollIntoView({ block: "start" }),
                   );
@@ -406,158 +617,182 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
                 )}
               </div>
               <h2>{selected.title}</h2>
-              <section>
-                <h3>Problemi</h3>
-                <p>{selected.problem}</p>
-              </section>
-              <section>
-                <h3>Ndryshimi i propozuar</h3>
-                <p>{selected.proposedChange}</p>
-              </section>
-              {selected.evidence.length > 0 && (
-                <section>
-                  <h3>Prova dhe media</h3>
-                  <EvidenceList items={selected.evidence} />
-                </section>
-              )}
-              <div className="argument-row">
-                <div>
-                  <span className="argument-label for">
-                    <Check size={15} /> Argumente pro
-                  </span>
-                  <strong>
-                    {selected.arguments.filter((argument) => argument.position === "for").length}
-                  </strong>
-                </div>
-                <div>
-                  <span className="argument-label against">
-                    <X size={15} /> Argumente kundër
-                  </span>
-                  <strong>
-                    {
-                      selected.arguments.filter((argument) => argument.position === "against")
-                        .length
-                    }
-                  </strong>
-                </div>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  aria-label="Shto argument"
-                  onClick={() => setDialog("argument")}
-                >
-                  <MessageSquareText />
-                </Button>
-              </div>
-              {selected.arguments.length > 0 && (
-                <div className="argument-samples">
-                  {selected.arguments.slice(0, 2).map((argument) => (
-                    <blockquote key={argument.id} className={argument.position}>
-                      <span>{argument.position === "for" ? "Pro" : "Kundër"}</span>
-                      {argument.body}
-                      <cite>{argument.pseudonym}</cite>
-                      {argument.evidence.length > 0 && <EvidenceList items={argument.evidence} />}
-                    </blockquote>
-                  ))}
-                </div>
-              )}
-              <section>
-                <h3>Historiku</h3>
-                <ol className="status-timeline">
-                  {selected.statusHistory.map((event, index) => (
-                    <li key={`${event.at}-${index}`}>
-                      <strong>{statusLabel(event.status)}</strong>
-                      <span>{formatDate(event.at)}</span>
-                      {event.note && <p>{event.note}</p>}
-                    </li>
-                  ))}
-                </ol>
-              </section>
-              {selected.institutionalResponse && (
-                <section className="institutional-response">
-                  <h3>Përgjigjja institucionale</h3>
-                  <p>
-                    <strong>{selected.institutionalResponse.institution}</strong> —{" "}
-                    {responseStatusLabel(selected.institutionalResponse.status)}
-                  </p>
-                  {selected.institutionalResponse.responseText && (
-                    <p>{selected.institutionalResponse.responseText}</p>
+              <div className="proposal-detail-columns">
+                <div className="proposal-content">
+                  <section>
+                    <h3>Problemi</h3>
+                    <p>{selected.problem}</p>
+                  </section>
+                  <section>
+                    <h3>Ndryshimi i propozuar</h3>
+                    <p>{selected.proposedChange}</p>
+                  </section>
+                  {selected.evidence.length > 0 && (
+                    <section>
+                      <h3>Prova dhe media</h3>
+                      <EvidenceList items={selected.evidence} />
+                    </section>
                   )}
-                  {selected.institutionalResponse.sourceUrl && (
-                    <a
-                      href={selected.institutionalResponse.sourceUrl}
-                      target="_blank"
-                      rel="noreferrer nofollow"
-                    >
-                      Shiko burimin zyrtar
-                    </a>
-                  )}
-                </section>
-              )}
-              <div className="vote-box">
-                {selected.status !== "voting_open" && selected.closedResult ? (
-                  <VoteResult result={selected.closedResult} />
-                ) : selected.status !== "voting_open" ? (
-                  <div className="moderation-state">
-                    <Clock3 />
-                    <div>
-                      <strong>{statusLabel(selected.status)}</strong>
-                      <p>
-                        {selected.status === "duplicate" && selected.duplicateOf
-                          ? "Ky propozim lidhet me një propozim ekzistues. Mund ta apelosh me sekretin e rikuperimit."
-                          : "Shiko historikun më sipër për arsyen dhe hapat e ardhshëm."}
-                      </p>
-                      {selected.status === "duplicate" && selected.duplicateOf && (
-                        <a href={`/propozime/${selected.duplicateOf}`}>Shiko propozimin kryesor</a>
-                      )}
-                    </div>
-                  </div>
-                ) : !voted ? (
-                  <>
-                    <div className="turnout">
-                      <Users />
+                </div>
+                <div className="vote-box">
+                  {selected.status !== "voting_open" && selected.closedResult ? (
+                    <VoteResult result={selected.closedResult} />
+                  ) : selected.status !== "voting_open" ? (
+                    <div className="moderation-state">
+                      <Clock3 />
                       <div>
-                        <strong>{selected.votingRound?.turnout ?? 0} pjesëmarrës</strong>
-                        <span>Rezultati shfaqet pasi të votosh</span>
+                        <strong>{statusLabel(selected.status)}</strong>
+                        <p>
+                          {selected.status === "duplicate" && selected.duplicateOf
+                            ? "Ky propozim lidhet me një propozim ekzistues. Mund ta apelosh me sekretin e rikuperimit."
+                            : "Shiko historikun më poshtë për arsyen dhe hapat e ardhshëm."}
+                        </p>
+                        {selected.status === "duplicate" && selected.duplicateOf && (
+                          <a href={`/propozime/${selected.duplicateOf}`}>
+                            Shiko propozimin kryesor
+                          </a>
+                        )}
                       </div>
                     </div>
-                    <div className="vote-buttons">
-                      <Button
-                        variant="outline"
-                        className={pendingVote === "support" ? "support active" : "support"}
-                        onClick={() => beginVote("support")}
-                      >
-                        <Check /> Mbështes
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className={pendingVote === "oppose" ? "oppose active" : "oppose"}
-                        onClick={() => beginVote("oppose")}
-                      >
-                        <X /> Kundërshtoj
-                      </Button>
-                    </div>
-                    {pendingVote && credential && (
-                      <Button className="confirm" onClick={() => void castVote()}>
-                        Konfirmo votën përfundimtare
-                      </Button>
-                    )}
-                    <p className="fineprint">
-                      <LockKeyhole size={13} /> Vota është përfundimtare dhe këshilluese.
+                  ) : !voted ? (
+                    <>
+                      <div className="turnout">
+                        <Users />
+                        <div>
+                          <strong>{selected.votingRound?.turnout ?? 0} pjesëmarrës</strong>
+                          <span>Rezultati shfaqet pasi të votosh</span>
+                        </div>
+                      </div>
+                      <div className="vote-buttons">
+                        <Button
+                          variant="outline"
+                          className={pendingVote === "support" ? "support active" : "support"}
+                          onClick={() => beginVote("support")}
+                        >
+                          <Check /> Mbështes
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className={pendingVote === "oppose" ? "oppose active" : "oppose"}
+                          onClick={() => beginVote("oppose")}
+                        >
+                          <X /> Kundërshtoj
+                        </Button>
+                      </div>
+                      {pendingVote && credential && (
+                        <Button className="confirm" onClick={() => void castVote()}>
+                          Konfirmo votën përfundimtare
+                        </Button>
+                      )}
+                      <p className="fineprint">
+                        <LockKeyhole size={13} /> Vota është përfundimtare dhe këshilluese.
+                      </p>
+                    </>
+                  ) : (
+                    <VoteResult result={result!} />
+                  )}
+                  {notice && (
+                    <p className="error" role="alert">
+                      {notice}
                     </p>
-                  </>
-                ) : (
-                  <VoteResult result={result!} />
-                )}
-                {notice && (
-                  <p className="error" role="alert">
-                    {notice}
-                  </p>
-                )}
-                {receipt && dialog !== "receipt" && (
-                  <Button variant="ghost" className="w-full" onClick={() => setDialog("receipt")}>
-                    Shiko mandatin tim
+                  )}
+                  {receipt && dialog !== "receipt" && (
+                    <Button variant="ghost" className="w-full" onClick={() => setDialog("receipt")}>
+                      Shiko mandatin tim
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="proposal-followup">
+                <div className="argument-row">
+                  <div>
+                    <span className="argument-label for">
+                      <Check size={15} /> Argumente pro
+                    </span>
+                    <strong>
+                      {selected.arguments.filter((argument) => argument.position === "for").length}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="argument-label against">
+                      <X size={15} /> Argumente kundër
+                    </span>
+                    <strong>
+                      {
+                        selected.arguments.filter((argument) => argument.position === "against")
+                          .length
+                      }
+                    </strong>
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="add-argument-button"
+                    onClick={() => setDialog("argument")}
+                  >
+                    <MessageSquareText /> Shto argument
                   </Button>
+                </div>
+                {selected.arguments.length > 0 && (
+                  <div className="argument-samples">
+                    {selected.arguments
+                      .slice(-2)
+                      .reverse()
+                      .map((argument) => (
+                        <blockquote key={argument.id} className={argument.position}>
+                          <span>{argument.position === "for" ? "Pro" : "Kundër"}</span>
+                          {argument.body}
+                          <cite>{argument.publicAuthorName ?? argument.pseudonym}</cite>
+                          {argument.evidence.length > 0 && (
+                            <EvidenceList items={argument.evidence} />
+                          )}
+                        </blockquote>
+                      ))}
+                  </div>
+                )}
+                <section className="history-section">
+                  <h3>Historiku</h3>
+                  <ol className="status-timeline">
+                    {visibleHistory.map((event, index) => (
+                      <li key={`${event.at}-${index}`}>
+                        <strong>{statusLabel(event.status)}</strong>
+                        <span>{formatDate(event.at)}</span>
+                        {event.note && <p>{event.note}</p>}
+                      </li>
+                    ))}
+                  </ol>
+                  {selected.statusHistory.length > 4 && (
+                    <Button
+                      variant="ghost"
+                      className="history-toggle"
+                      aria-expanded={historyExpanded}
+                      onClick={() => setHistoryExpanded((expanded) => !expanded)}
+                    >
+                      {historyExpanded
+                        ? "Shfaq vetëm ngjarjet e fundit"
+                        : `Shfaq edhe ${hiddenHistoryCount} ngjarje`}
+                    </Button>
+                  )}
+                </section>
+                {selected.institutionalResponse && (
+                  <section className="institutional-response">
+                    <h3>Përgjigjja institucionale</h3>
+                    <p>
+                      <strong>{selected.institutionalResponse.institution}</strong> —{" "}
+                      {responseStatusLabel(selected.institutionalResponse.status)}
+                    </p>
+                    {selected.institutionalResponse.responseText && (
+                      <p>{selected.institutionalResponse.responseText}</p>
+                    )}
+                    {selected.institutionalResponse.sourceUrl && (
+                      <a
+                        href={selected.institutionalResponse.sourceUrl}
+                        target="_blank"
+                        rel="noreferrer nofollow"
+                      >
+                        Shiko burimin zyrtar
+                      </a>
+                    )}
+                  </section>
                 )}
               </div>
             </article>
@@ -635,8 +870,11 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
         <ArgumentDialog
           proposal={selected}
           credential={credential}
-          onNeedCredential={(body, position) => {
-            sessionStorage.setItem("kuvend.pendingArgument.v1", JSON.stringify({ body, position }));
+          onNeedCredential={(body, position, evidence, publicAuthorName) => {
+            sessionStorage.setItem(
+              "kuvend.pendingArgument.v1",
+              JSON.stringify({ body, position, evidence, publicAuthorName }),
+            );
             setAfterOtp("argument");
             setDialog("otp");
           }}
@@ -756,9 +994,8 @@ function DialogShell({
         if (!open) onClose();
       }}
     >
-      <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <Badge variant="secondary">Kuvend</Badge>
           <DialogTitle className="text-xl">{title}</DialogTitle>
           <DialogDescription>{subtitle}</DialogDescription>
         </DialogHeader>
@@ -899,6 +1136,13 @@ function ProposalDialog({
   );
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState("");
+  const [displayPreference, setDisplayPreference] = useState<DisplayPreference>(() =>
+    readDisplayPreference(),
+  );
+  function updateDisplayPreference(value: DisplayPreference) {
+    setDisplayPreference(value);
+    saveDisplayPreference(value);
+  }
   function field<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
   }
@@ -932,7 +1176,15 @@ function ProposalDialog({
     const response = await fetch(`${civicUrl}/v1/proposals`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ ...draft, scope: "national", credential, authorCapabilityHash }),
+      body: JSON.stringify({
+        ...draft,
+        scope: "national",
+        credential,
+        authorCapabilityHash,
+        ...(displayPreference.mode === "name" && displayPreference.name.trim()
+          ? { publicAuthorName: displayPreference.name.trim() }
+          : {}),
+      }),
     });
     if (!response.ok)
       return setError(
@@ -1040,13 +1292,14 @@ function ProposalDialog({
                   </SelectGroup>
                 </SelectContent>
               </Select>
-              <FieldDescription>Provat dhe media janë opsionale.</FieldDescription>
+              <FieldDescription>Zgjidh temën që e përshkruan më mirë propozimin.</FieldDescription>
             </Field>
             <EvidenceEditor
               items={draft.evidence}
               onChange={(items) => field("evidence", items)}
               limit={8}
             />
+            <DisplayPreferenceEditor value={displayPreference} onChange={updateDisplayPreference} />
           </FieldGroup>
         )}
         {step === 5 && (
@@ -1128,6 +1381,10 @@ function ProposalDialog({
                   <EvidenceList items={draft.evidence} />
                 </div>
               )}
+              <div>
+                <span>Publikohet si</span>
+                <strong>{displayPreferenceLabel(displayPreference)}</strong>
+              </div>
             </div>
             <label className="confirm-check">
               <Checkbox
@@ -1162,9 +1419,14 @@ function ProposalDialog({
           </Button>
         )}
         {step === 4 && (
-          <Button onClick={() => void improve()}>
-            Rishiko me ndihmën opsionale <ChevronRight data-icon="inline-end" />
-          </Button>
+          <>
+            <Button variant="outline" onClick={() => setStep(6)}>
+              Pa ndihmë AI
+            </Button>
+            <Button onClick={() => void improve()}>
+              Kontrollo me AI <ChevronRight data-icon="inline-end" />
+            </Button>
+          </>
         )}
         {step === 6 && (
           <Button disabled={!confirmed} onClick={() => void submit()}>
@@ -1336,31 +1598,19 @@ function ManageProposalDialog({
     >
       <div className="position-tabs">
         {canRevise && (
-          <Button
-            variant="outline"
-            className={action === "revise" ? "selected" : ""}
-            onClick={() => setAction("revise")}
-          >
+          <ChoiceButton selected={action === "revise"} onClick={() => setAction("revise")}>
             Ndrysho
-          </Button>
+          </ChoiceButton>
         )}
         {canWithdraw && (
-          <Button
-            variant="outline"
-            className={action === "withdraw" ? "selected" : ""}
-            onClick={() => setAction("withdraw")}
-          >
+          <ChoiceButton selected={action === "withdraw"} onClick={() => setAction("withdraw")}>
             Tërhiqe
-          </Button>
+          </ChoiceButton>
         )}
         {canAppeal && (
-          <Button
-            variant="outline"
-            className={action === "appeal" ? "selected" : ""}
-            onClick={() => setAction("appeal")}
-          >
+          <ChoiceButton selected={action === "appeal"} onClick={() => setAction("appeal")}>
             Apelo
-          </Button>
+          </ChoiceButton>
         )}
       </div>
       {action === "revise" ? (
@@ -1541,9 +1791,11 @@ function NotificationDialog({ onClose }: { onClose: () => void }) {
         Mund t’i çaktivizosh kurdoherë në cilësimet e shfletuesit. Për një alternativë pa leje
         shfletuesi, përdor <a href="/feed.xml">RSS-in publik</a>.
       </p>
-      <fieldset className="notification-topics">
-        <legend>Temat që dëshiron</legend>
-        <p>Lëri të gjitha bosh për çdo votim të ri.</p>
+      <fieldset className="notification-topics" aria-describedby="notification-topics-help">
+        <FieldLegend>Temat që dëshiron</FieldLegend>
+        <FieldDescription id="notification-topics-help">
+          Lëri të gjitha bosh për çdo votim të ri.
+        </FieldDescription>
         <div>
           {Object.entries(categoryLabels).map(([value, label]) => (
             <label key={value}>
@@ -1595,7 +1847,12 @@ function ArgumentDialog({
 }: {
   proposal: ProposalRecord;
   credential: string;
-  onNeedCredential: (body: string, position: "for" | "against") => void;
+  onNeedCredential: (
+    body: string,
+    position: "for" | "against",
+    evidence: EvidenceItem[],
+    publicAuthorName?: string,
+  ) => void;
   onClose: () => void;
   onCreated: (argument: ProposalRecord["arguments"][number]) => void;
 }) {
@@ -1604,6 +1861,8 @@ function ArgumentDialog({
       return JSON.parse(sessionStorage.getItem("kuvend.pendingArgument.v1") ?? "null") as {
         body: string;
         position: "for" | "against";
+        evidence: EvidenceItem[];
+        publicAuthorName?: string;
       } | null;
     } catch {
       return null;
@@ -1611,10 +1870,18 @@ function ArgumentDialog({
   })();
   const [position, setPosition] = useState<"for" | "against">(saved?.position ?? "for");
   const [body, setBody] = useState(saved?.body ?? "");
+  const [displayPreference, setDisplayPreference] = useState<DisplayPreference>(() =>
+    saved?.publicAuthorName
+      ? { mode: "name", name: saved.publicAuthorName }
+      : (readDisplayPreference() ?? defaultDisplayPreference),
+  );
+  const [editingIdentity, setEditingIdentity] = useState(false);
   const [error, setError] = useState("");
-  const [evidence, setEvidence] = useState<EvidenceItem[]>([]);
+  const [evidence, setEvidence] = useState<EvidenceItem[]>(saved?.evidence ?? []);
   async function submit() {
-    if (!credential) return onNeedCredential(body, position);
+    const visibleName =
+      displayPreference.mode === "name" ? displayPreference.name.trim() : undefined;
+    if (!credential) return onNeedCredential(body, position, evidence, visibleName);
     const holder = localStorage.getItem("kuvend.holderSecret.v1") ?? crypto.randomUUID();
     localStorage.setItem("kuvend.holderSecret.v1", holder);
     const contributionNullifier = await sha256(`${holder}:${proposal.id}:argument:${position}`);
@@ -1626,6 +1893,7 @@ function ArgumentDialog({
         position,
         body,
         evidence,
+        ...(visibleName ? { publicAuthorName: visibleName } : {}),
         credential,
         contributionNullifier,
       }),
@@ -1640,20 +1908,20 @@ function ArgumentDialog({
       onClose={onClose}
     >
       <div className="position-tabs">
-        <Button
-          variant="outline"
-          className={position === "for" ? "selected" : ""}
+        <ChoiceButton
+          tone="success"
+          selected={position === "for"}
           onClick={() => setPosition("for")}
         >
           <Check /> Pro
-        </Button>
-        <Button
-          variant="outline"
-          className={position === "against" ? "selected" : ""}
+        </ChoiceButton>
+        <ChoiceButton
+          tone="danger"
+          selected={position === "against"}
           onClick={() => setPosition("against")}
         >
           <X /> Kundër
-        </Button>
+        </ChoiceButton>
       </div>
       <Field>
         <Label htmlFor="argument-body">Argumenti</Label>
@@ -1666,8 +1934,32 @@ function ArgumentDialog({
         />
       </Field>
       <EvidenceEditor items={evidence} onChange={setEvidence} limit={3} />
-      <p className="fineprint">Publikohet me një pseudonim të rastësishëm. Nuk krijohet profil.</p>
-      <Button className="full" onClick={() => void submit()}>
+      <div className="author-default">
+        <div>
+          <span>Po publikon si</span>
+          <strong>{displayPreferenceLabel(displayPreference)}</strong>
+        </div>
+        <Button type="button" variant="ghost" onClick={() => setEditingIdentity((value) => !value)}>
+          {editingIdentity ? "Mbyll" : "Ndrysho"}
+        </Button>
+      </div>
+      {editingIdentity && (
+        <DisplayPreferenceEditor
+          value={displayPreference}
+          onChange={(value) => {
+            setDisplayPreference(value);
+            saveDisplayPreference(value);
+          }}
+        />
+      )}
+      <Button
+        className="full"
+        disabled={
+          body.trim().length < 8 ||
+          (displayPreference.mode === "name" && displayPreference.name.trim().length < 2)
+        }
+        onClick={() => void submit()}
+      >
         Publiko argumentin
       </Button>
       {error && <p className="error">{error}</p>}
