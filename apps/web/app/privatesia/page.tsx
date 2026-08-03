@@ -4,6 +4,7 @@ import { LegalPage } from "../legal-page";
 export const metadata: Metadata = {
   title: "Privatësia — Kuvend",
   description: "Si ndahen dhe mbrohen të dhënat në Kuvend.",
+  alternates: { canonical: "/privatesia" },
 };
 
 export default function PrivacyPage() {

@@ -1,6 +1,6 @@
 "use client";
 
-import type { EvidenceItem, ProposalRecord, VoteChoice } from "@kuvend/contracts";
+import type { ArgumentRecord, EvidenceItem, ProposalRecord, VoteChoice } from "@kuvend/contracts";
 import {
   Alert,
   AlertDescription,
@@ -14,6 +14,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  ExternalResearchActions,
   Field,
   FieldDescription,
   FieldGroup,
@@ -25,6 +26,8 @@ import {
   Progress,
   ProgressLabel,
   ProgressValue,
+  PublicSiteFooter,
+  PublicSiteHeader,
   SearchField,
   Select,
   SelectContent,
@@ -35,23 +38,36 @@ import {
   Textarea,
 } from "@kuvend/ui";
 import {
+  Archive,
   ArrowLeft,
   Bell,
   Check,
   ChevronRight,
+  CircleDot,
   CircleHelp,
   Clock3,
+  List,
   LockKeyhole,
-  Menu,
   MessageSquareText,
   Plus,
+  Search,
+  Send,
   Share2,
   ShieldCheck,
+  SlidersHorizontal,
   Users,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { EvidenceEditor, EvidenceList } from "../features/kuvend/evidence";
+import {
+  buildGoogleSearchUrl,
+  buildResearchDeepLink,
+  buildResearchPrompt,
+  openExternalResearchUrl,
+  researchProviders,
+  type ResearchProviderId,
+} from "../features/kuvend/external-research";
 import {
   defaultDisplayPreference,
   DisplayPreferenceEditor,
@@ -81,8 +97,17 @@ const categoryLabels: Record<string, string> = {
 export const fallback = fallbackProposals;
 
 type Dialog =
-  "proposal" | "argument" | "notification" | "otp" | "receipt" | "recovery" | "manage" | null;
-type SectionId = "propozimet" | "si-funksionon" | "transparenca";
+  | "proposal"
+  | "argument"
+  | "argumentList"
+  | "voteHelp"
+  | "filters"
+  | "notification"
+  | "otp"
+  | "receipt"
+  | "recovery"
+  | "manage"
+  | null;
 type Draft = {
   title: string;
   problem: string;
@@ -111,8 +136,18 @@ function formatDate(value: string) {
   return `${day}.${month}.${date.getUTCFullYear()}`;
 }
 
-export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string }) {
-  const [proposals, setProposals] = useState<ProposalRecord[]>(fallback);
+export function KuvendApp({
+  initialSelectedId,
+  initialProposal,
+}: {
+  initialSelectedId?: string;
+  initialProposal?: ProposalRecord;
+}) {
+  const [proposals, setProposals] = useState<ProposalRecord[]>(() =>
+    initialProposal
+      ? [initialProposal, ...fallback.filter((proposal) => proposal.id !== initialProposal.id)]
+      : fallback,
+  );
   const [selectedId, setSelectedId] = useState(initialSelectedId ?? "");
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -129,10 +164,8 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
   const [notice, setNotice] = useState("");
   const [afterOtp, setAfterOtp] = useState<"proposal" | "argument" | "vote" | null>(null);
   const [authorCapability, setAuthorCapability] = useState("");
-  const [menuOpen, setMenuOpen] = useState(false);
   const [displayNow, setDisplayNow] = useState<number | null>(null);
-  const [activeSection, setActiveSection] = useState<SectionId>("propozimet");
-  const navigationTarget = useRef<SectionId | null>(null);
+  const [mobileProposalToolsVisible, setMobileProposalToolsVisible] = useState(false);
 
   useEffect(() => {
     setDisplayNow(Date.now());
@@ -145,34 +178,20 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
   }, []);
 
   useEffect(() => {
+    if (selectedId || !window.matchMedia("(max-width: 639px)").matches) {
+      setMobileProposalToolsVisible(false);
+      return;
+    }
+
+    const proposalArea = document.querySelector(".proposal-area");
+    if (!proposalArea) return;
     const observer = new IntersectionObserver(
-      (entries) => {
-        if (navigationTarget.current) {
-          const reachedTarget = entries.find(
-            (entry) => entry.isIntersecting && entry.target.id === navigationTarget.current,
-          );
-          if (!reachedTarget) return;
-          navigationTarget.current = null;
-        }
-        const visibleEntry = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (visibleEntry) {
-          setActiveSection(visibleEntry.target.id as SectionId);
-        }
-      },
-      { rootMargin: "-20% 0px -55%", threshold: [0, 0.2, 0.5] },
+      ([entry]) => setMobileProposalToolsVisible(Boolean(entry?.isIntersecting)),
+      { threshold: 0.02 },
     );
-    for (const id of ["propozimet", "si-funksionon", "transparenca"]) {
-      const section = document.getElementById(id);
-      if (section) observer.observe(section);
-    }
-    const initialSection = window.location.hash.slice(1) as SectionId;
-    if (["propozimet", "si-funksionon", "transparenca"].includes(initialSection)) {
-      requestAnimationFrame(() => navigateToSection(initialSection, false));
-    }
+    observer.observe(proposalArea);
     return () => observer.disconnect();
-  }, []);
+  }, [selectedId]);
 
   useEffect(() => {
     const syncLocation = () => {
@@ -182,6 +201,18 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
       setStatusFilter(searchParams.get("status") ?? "");
       const proposalMatch = window.location.pathname.match(/^\/propozime\/([^/]+)$/);
       setSelectedId(proposalMatch?.[1] ? extractProposalId(proposalMatch[1]) : "");
+      const action = searchParams.get("action");
+      if (action === "proposal") setDialog("proposal");
+      if (action === "notifications") setDialog("notification");
+      if (action) {
+        searchParams.delete("action");
+        const queryString = searchParams.toString();
+        window.history.replaceState(
+          null,
+          "",
+          `${window.location.pathname}${queryString ? `?${queryString}` : ""}${window.location.hash}`,
+        );
+      }
     };
     syncLocation();
     window.addEventListener("popstate", syncLocation);
@@ -219,6 +250,8 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
     ? selected.statusHistory
     : selected.statusHistory.slice(-4);
   const hiddenHistoryCount = selected.statusHistory.length - visibleHistory.length;
+  const argumentsFor = selected.arguments.filter((argument) => argument.position === "for");
+  const argumentsAgainst = selected.arguments.filter((argument) => argument.position === "against");
 
   function beginVote(choice: VoteChoice) {
     setPendingVote(choice);
@@ -262,20 +295,6 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
       "",
       `${url.pathname}${url.search}${url.hash}`,
     );
-  }
-
-  function navigateToSection(sectionId: SectionId, updateHistory = true) {
-    navigationTarget.current = sectionId;
-    setActiveSection(sectionId);
-    if (updateHistory) {
-      const url = new URL(window.location.href);
-      url.hash = sectionId;
-      window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
-    }
-    document.getElementById(sectionId)?.scrollIntoView({
-      block: "start",
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-    });
   }
 
   async function castVote(activeCredential = credential) {
@@ -325,127 +344,58 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
     }
   }
 
-  return (
-    <div className="site-shell">
-      <header className="topbar">
-        <a className="brand" href="#top" aria-label="Kuvend, kreu">
-          <img src="/mark.svg" alt="" />
-          <span>Kuvend</span>
-        </a>
-        <nav aria-label="Kryesor">
-          <a
-            href="#propozimet"
-            aria-current={activeSection === "propozimet" ? "location" : undefined}
-            onClick={(event) => {
-              event.preventDefault();
-              navigateToSection("propozimet");
-            }}
-          >
-            Propozimet
-          </a>
-          <a
-            href="#si-funksionon"
-            aria-current={activeSection === "si-funksionon" ? "location" : undefined}
-            onClick={(event) => {
-              event.preventDefault();
-              navigateToSection("si-funksionon");
-            }}
-          >
-            Si funksionon
-          </a>
-          <a
-            href="#transparenca"
-            aria-current={activeSection === "transparenca" ? "location" : undefined}
-            onClick={(event) => {
-              event.preventDefault();
-              navigateToSection("transparenca");
-            }}
-          >
-            Transparenca
-          </a>
-        </nav>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="notification-link"
-          aria-label="Njoftimet"
-          title="Njoftimet"
-          onClick={() => setDialog("notification")}
-        >
-          <Bell />
-        </Button>
-        <Button
-          size="lg"
-          className="compact"
-          aria-label="Propozo"
-          onClick={() => setDialog("proposal")}
-        >
-          <Plus data-icon="inline-start" />
-          <span className="mobile-label">Propozo</span>
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="menu-button"
-          aria-label={menuOpen ? "Mbyll menunë" : "Hap menunë"}
-          aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((open) => !open)}
-        >
-          {menuOpen ? <X /> : <Menu />}
-        </Button>
-      </header>
-      {menuOpen && (
-        <nav className="mobile-menu" aria-label="Menuja celulare">
-          <a
-            href="#propozimet"
-            aria-current={activeSection === "propozimet" ? "location" : undefined}
-            onClick={(event) => {
-              event.preventDefault();
-              navigateToSection("propozimet");
-              setMenuOpen(false);
-            }}
-          >
-            Propozimet
-          </a>
-          <a
-            href="#si-funksionon"
-            aria-current={activeSection === "si-funksionon" ? "location" : undefined}
-            onClick={(event) => {
-              event.preventDefault();
-              navigateToSection("si-funksionon");
-              setMenuOpen(false);
-            }}
-          >
-            Si funksionon
-          </a>
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setMenuOpen(false);
-              setDialog("notification");
-            }}
-          >
-            Njoftimet
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setMenuOpen(false);
-              setDialog("proposal");
-            }}
-          >
-            Bëj një propozim
-          </Button>
-        </nav>
-      )}
+  function publicResearchProposal() {
+    return {
+      title: selected.title,
+      problem: selected.problem,
+      proposedChange: selected.proposedChange,
+      scope: selected.scope === "national" ? "Kombëtar" : "Vendor",
+      ...(selected.location ? { location: selected.location } : {}),
+      category: categoryLabels[selected.category] ?? "Tjetër",
+      evidence: selected.evidence.map(({ type, url, title, publisher, publishedAt }) => ({
+        type,
+        url,
+        title,
+        ...(publisher ? { publisher } : {}),
+        ...(publishedAt ? { publishedAt } : {}),
+      })),
+      canonicalUrl: `${location.origin}${proposalPath(selected)}`,
+    };
+  }
 
-      <section className="identity-strip" id="top">
-        <ShieldCheck size={17} />
-        <strong>I pavarur dhe joqeveritar.</strong>
-        <span>
-          Rezultatet janë këshilluese; nuk përfaqësojnë qytetarët ose banorët e Shqipërisë.
-        </span>
-      </section>
+  async function researchProposal(providerId: string) {
+    const provider = researchProviders.find((item) => item.id === providerId);
+    if (!provider?.enabled) {
+      setNotice("Ky shërbim kërkimi nuk është i disponueshëm tani.");
+      return;
+    }
+
+    const publicProposal = publicResearchProposal();
+    if (provider.id === "google") {
+      openExternalResearchUrl(buildGoogleSearchUrl(publicProposal));
+      setNotice("Kërkimi u hap në Google.");
+      return;
+    }
+
+    const prompt = buildResearchPrompt(publicProposal);
+    try {
+      await navigator.clipboard?.writeText(prompt);
+    } catch {
+      // The direct link already contains the public prompt; clipboard is only a fallback.
+    }
+    openExternalResearchUrl(
+      buildResearchDeepLink(provider.id as "chatgpt" | "claude", publicProposal),
+    );
+    setNotice(`Pyetja u hap në ${provider.label.replace("Pyet ", "")}.`);
+  }
+
+  return (
+    <div className={`site-shell ${selectedId ? "proposal-selected" : "proposal-index"}`}>
+      <PublicSiteHeader
+        active="proposals"
+        onNotifications={() => setDialog("notification")}
+        onPropose={() => setDialog("proposal")}
+      />
 
       <main>
         <section className="hero">
@@ -464,7 +414,7 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
               <Button size="lg" onClick={() => setDialog("proposal")}>
                 <Plus data-icon="inline-start" /> Bëj një propozim
               </Button>
-              <a className="text-link" href="#si-funksionon">
+              <a className="text-link" href="/si-funksionon">
                 Si funksionon <ChevronRight size={18} />
               </a>
             </div>
@@ -496,38 +446,60 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
               </div>
             </div>
             <div className="proposal-filters">
-              <SearchField
-                value={query}
-                onChange={(event) => updateQuery(event.target.value)}
-                aria-label="Kërko propozime"
-                placeholder="Kërko propozime"
-              />
-              <NativeSelect
-                value={categoryFilter}
-                aria-label="Filtro sipas kategorisë"
-                onChange={(event) =>
-                  updateFilter("category", event.target.value, setCategoryFilter)
-                }
-              >
-                <option value="">Të gjitha kategoritë</option>
-                {Object.entries(categoryLabels).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </NativeSelect>
-              <NativeSelect
-                value={statusFilter}
-                aria-label="Filtro sipas statusit"
-                onChange={(event) => updateFilter("status", event.target.value, setStatusFilter)}
-              >
-                <option value="">Të gjitha statuset</option>
-                <option value="voting_open">Votimi i hapur</option>
-                <option value="pending_review">Në shqyrtim</option>
-                <option value="voting_closed">Votimi i mbyllur</option>
-                <option value="awaiting_response">Në pritje të përgjigjes</option>
-                <option value="responded">Me përgjigje</option>
-              </NativeSelect>
+              <div className="proposal-filter-fields">
+                <SearchField
+                  value={query}
+                  onChange={(event) => updateQuery(event.target.value)}
+                  aria-label="Kërko propozime"
+                  placeholder="Kërko propozime"
+                />
+                <NativeSelect
+                  value={categoryFilter}
+                  aria-label="Filtro sipas kategorisë"
+                  onChange={(event) =>
+                    updateFilter("category", event.target.value, setCategoryFilter)
+                  }
+                >
+                  <option value="">Të gjitha kategoritë</option>
+                  {Object.entries(categoryLabels).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </NativeSelect>
+                <NativeSelect
+                  value={statusFilter}
+                  aria-label="Filtro sipas statusit"
+                  onChange={(event) => updateFilter("status", event.target.value, setStatusFilter)}
+                >
+                  <option value="">Çdo status</option>
+                  <option value="voting_open">Votimi i hapur</option>
+                  <option value="pending_review">Në shqyrtim</option>
+                  <option value="voting_closed">Votimi i mbyllur</option>
+                  <option value="awaiting_response">Në pritje të përgjigjes</option>
+                  <option value="responded">Me përgjigje</option>
+                </NativeSelect>
+              </div>
+              <div className="status-shortcuts" role="group" aria-label="Statuset kryesore">
+                <ChoiceButton
+                  selected={statusFilter === ""}
+                  onClick={() => updateFilter("status", "", setStatusFilter)}
+                >
+                  Të gjitha
+                </ChoiceButton>
+                <ChoiceButton
+                  selected={statusFilter === "voting_open"}
+                  onClick={() => updateFilter("status", "voting_open", setStatusFilter)}
+                >
+                  Hapur
+                </ChoiceButton>
+                <ChoiceButton
+                  selected={statusFilter === "voting_closed"}
+                  onClick={() => updateFilter("status", "voting_closed", setStatusFilter)}
+                >
+                  Mbyllur
+                </ChoiceButton>
+              </div>
             </div>
           </div>
           <div className="proposal-grid">
@@ -617,6 +589,29 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
                 )}
               </div>
               <h2>{selected.title}</h2>
+              <aside className="research-callout">
+                <span className="research-callout-icon" aria-hidden="true">
+                  <Search />
+                </span>
+                <div>
+                  <strong>Kontrollo pretendimet para se të votosh</strong>
+                  <p>Hulumto burimet dhe kundërargumentet me AI ose Google.</p>
+                </div>
+                <div className="research-callout-action">
+                  <ExternalResearchActions
+                    actions={researchProviders.map((provider) => ({
+                      id: provider.id,
+                      label: provider.label,
+                      description: provider.description,
+                      icon: provider.icon,
+                      disabled: !provider.enabled,
+                    }))}
+                    onSelect={(providerId) =>
+                      void researchProposal(providerId as ResearchProviderId)
+                    }
+                  />
+                </div>
+              </aside>
               <div className="proposal-detail-columns">
                 <div className="proposal-content">
                   <section>
@@ -680,12 +675,26 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
                         </Button>
                       </div>
                       {pendingVote && credential && (
-                        <Button className="confirm" onClick={() => void castVote()}>
-                          Konfirmo votën përfundimtare
-                        </Button>
+                        <div className="vote-confirmation">
+                          <div>
+                            <ShieldCheck />
+                            <p>
+                              <strong>Gati për konfirmim</strong>
+                              Numri yt nuk dërgohet me votën. Rezultati shfaqet vetëm pasi ta
+                              konfirmosh.
+                            </p>
+                          </div>
+                          <Button className="confirm" onClick={() => void castVote()}>
+                            Konfirmo votën përfundimtare
+                          </Button>
+                        </div>
                       )}
                       <p className="fineprint">
-                        <LockKeyhole size={13} /> Vota është përfundimtare dhe këshilluese.
+                        <LockKeyhole size={13} />
+                        <span>Votë përfundimtare, këshilluese.</span>
+                        <Button variant="link" onClick={() => setDialog("voteHelp")}>
+                          Hapat
+                        </Button>
                       </p>
                     </>
                   ) : (
@@ -704,51 +713,55 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
                 </div>
               </div>
               <div className="proposal-followup">
-                <div className="argument-row">
-                  <div>
-                    <span className="argument-label for">
-                      <Check size={15} /> Argumente pro
-                    </span>
-                    <strong>
-                      {selected.arguments.filter((argument) => argument.position === "for").length}
-                    </strong>
+                <section className="arguments-section" aria-labelledby="arguments-title">
+                  <div className="arguments-heading">
+                    <div>
+                      <h3 id="arguments-title">Argumentet</h3>
+                      <Badge variant="secondary">{selected.arguments.length}</Badge>
+                    </div>
+                    <Button variant="outline" onClick={() => setDialog("argument")}>
+                      <MessageSquareText /> Shto argument
+                    </Button>
                   </div>
-                  <div>
-                    <span className="argument-label against">
-                      <X size={15} /> Argumente kundër
-                    </span>
-                    <strong>
-                      {
-                        selected.arguments.filter((argument) => argument.position === "against")
-                          .length
-                      }
-                    </strong>
+                  <div className="argument-preview-grid">
+                    <div className="argument-column">
+                      <div className="argument-column-heading for">
+                        <span>
+                          <Check size={16} /> Pro
+                        </span>
+                        <strong>{argumentsFor.length}</strong>
+                      </div>
+                      {argumentsFor.length > 0 ? (
+                        <ArgumentCard argument={argumentsFor.at(-1)!} />
+                      ) : (
+                        <p className="argument-empty">Ende nuk ka argumente pro.</p>
+                      )}
+                    </div>
+                    <div className="argument-column">
+                      <div className="argument-column-heading against">
+                        <span>
+                          <X size={16} /> Kundër
+                        </span>
+                        <strong>{argumentsAgainst.length}</strong>
+                      </div>
+                      {argumentsAgainst.length > 0 ? (
+                        <ArgumentCard argument={argumentsAgainst.at(-1)!} />
+                      ) : (
+                        <p className="argument-empty">Ende nuk ka argumente kundër.</p>
+                      )}
+                    </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    className="add-argument-button"
-                    onClick={() => setDialog("argument")}
-                  >
-                    <MessageSquareText /> Shto argument
-                  </Button>
-                </div>
-                {selected.arguments.length > 0 && (
-                  <div className="argument-samples">
-                    {selected.arguments
-                      .slice(-2)
-                      .reverse()
-                      .map((argument) => (
-                        <blockquote key={argument.id} className={argument.position}>
-                          <span>{argument.position === "for" ? "Pro" : "Kundër"}</span>
-                          {argument.body}
-                          <cite>{argument.publicAuthorName ?? argument.pseudonym}</cite>
-                          {argument.evidence.length > 0 && (
-                            <EvidenceList items={argument.evidence} />
-                          )}
-                        </blockquote>
-                      ))}
-                  </div>
-                )}
+                  {selected.arguments.length > 2 && (
+                    <Button
+                      variant="ghost"
+                      className="view-all-arguments"
+                      onClick={() => setDialog("argumentList")}
+                    >
+                      Shiko të gjitha {selected.arguments.length} argumentet
+                      <ChevronRight />
+                    </Button>
+                  )}
+                </section>
                 <section className="history-section">
                   <h3>Historiku</h3>
                   <ol className="status-timeline">
@@ -797,29 +810,93 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
               </div>
             </article>
           </div>
+          {mobileProposalToolsVisible && (
+            <div className="mobile-filter-bar" role="group" aria-label="Statuset kryesore">
+              <Button
+                variant="ghost"
+                className={`mobile-filter-action ${statusFilter === "" ? "active" : ""}`}
+                aria-pressed={statusFilter === ""}
+                onClick={() => updateFilter("status", "", setStatusFilter)}
+              >
+                <List aria-hidden="true" />
+                <span>Të gjitha</span>
+              </Button>
+              <Button
+                variant="ghost"
+                className={`mobile-filter-action ${statusFilter === "voting_open" ? "active" : ""}`}
+                aria-pressed={statusFilter === "voting_open"}
+                onClick={() => updateFilter("status", "voting_open", setStatusFilter)}
+              >
+                <CircleDot aria-hidden="true" />
+                <span>Në votim</span>
+              </Button>
+              <Button
+                variant="ghost"
+                className={`mobile-filter-action ${statusFilter === "voting_closed" ? "active" : ""}`}
+                aria-pressed={statusFilter === "voting_closed"}
+                onClick={() => updateFilter("status", "voting_closed", setStatusFilter)}
+              >
+                <Archive aria-hidden="true" />
+                <span>Mbyllur</span>
+              </Button>
+              <Button
+                variant="ghost"
+                className="mobile-filter-action"
+                aria-label="Më shumë filtra"
+                onClick={() => setDialog("filters")}
+              >
+                <span className="mobile-filter-icon">
+                  <SlidersHorizontal aria-hidden="true" />
+                  {(query ||
+                    categoryFilter ||
+                    !["", "voting_open", "voting_closed"].includes(statusFilter)) && (
+                    <i aria-hidden="true" />
+                  )}
+                </span>
+                <span>Filtra</span>
+              </Button>
+            </div>
+          )}
         </section>
 
         <section className="how" id="si-funksionon">
           <span className="eyebrow">E thjeshtë dhe e shpjegueshme</span>
-          <h2>Nga ideja te përgjigjja</h2>
+          <div className="how-heading">
+            <h2>Nga ideja te përgjigjja</h2>
+            <a className="text-link" href="/si-funksionon">
+              Shiko shpjegimin e plotë <ChevronRight />
+            </a>
+          </div>
           <div className="steps">
             <div>
-              <b>1</b>
+              <div className="step-marker">
+                <b>1</b>
+                <Plus aria-hidden="true" />
+              </div>
               <h3>Propozo</h3>
               <p>Shkruaj ose dikto idenë. Ndihma gjuhësore është gjithmonë opsionale.</p>
             </div>
             <div>
-              <b>2</b>
+              <div className="step-marker">
+                <b>2</b>
+                <ShieldCheck aria-hidden="true" />
+              </div>
               <h3>Shqyrtohet</h3>
               <p>Brenda 72 orësh kontrollohen siguria, privatësia dhe dublikatat.</p>
             </div>
             <div>
-              <b>3</b>
+              <div className="step-marker">
+                <b>3</b>
+                <Check aria-hidden="true" />
+              </div>
               <h3>Votohet</h3>
               <p>Çdo propozim i pranueshëm qëndron hapur 14 ditë dhe dy fundjava.</p>
             </div>
             <div>
-              <b>4</b>
+              <div className="step-marker">
+                <b>4</b>
+                <Send aria-hidden="true" />
+              </div>
               <h3>Ndiqet</h3>
               <p>Rezultati i dërgohet institucionit dhe përgjigjja publikohet.</p>
             </div>
@@ -827,26 +904,7 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
         </section>
       </main>
 
-      <footer id="transparenca">
-        <div>
-          <a className="brand inverse" href="#top">
-            <img src="/mark.svg" alt="" />
-            <span>Kuvend</span>
-          </a>
-          <p>Infrastrukturë qytetare e hapur, e pavarur dhe jofitimprurëse.</p>
-        </div>
-        <div>
-          <strong>Transparenca</strong>
-          <a href="/transparenca">Transparenca dhe financimi</a>
-          <a href="/privatesia">Privatësia</a>
-          <a href="/kushtet">Kushtet</a>
-          <a href="/moderimi">Moderimi</a>
-        </div>
-        <div>
-          <strong>Kujdes</strong>
-          <p>Beta përdor dëshmi sintetike. Nuk është votim zgjedhor apo përfaqësues.</p>
-        </div>
-      </footer>
+      <PublicSiteFooter />
 
       {dialog === "proposal" && (
         <ProposalDialog
@@ -891,6 +949,75 @@ export function KuvendApp({ initialSelectedId }: { initialSelectedId?: string })
             setDialog(null);
           }}
         />
+      )}
+      {dialog === "argumentList" && (
+        <ArgumentListDialog arguments={selected.arguments} onClose={() => setDialog(null)} />
+      )}
+      {dialog === "voteHelp" && <VoteHelpDialog onClose={() => setDialog(null)} />}
+      {dialog === "filters" && (
+        <DialogShell
+          title="Kërko dhe filtro"
+          subtitle="Gjej propozime sipas fjalëve, kategorisë ose fazës së tyre."
+          onClose={() => setDialog(null)}
+        >
+          <div className="mobile-filter-sheet">
+            <Field>
+              <Label htmlFor="mobile-proposal-search">Kërko propozime</Label>
+              <SearchField
+                id="mobile-proposal-search"
+                value={query}
+                onChange={(event) => updateQuery(event.target.value)}
+                placeholder="Shkruaj një fjalë kyçe"
+              />
+            </Field>
+            <Field>
+              <Label htmlFor="mobile-category-filter">Kategoria</Label>
+              <NativeSelect
+                id="mobile-category-filter"
+                value={categoryFilter}
+                onChange={(event) =>
+                  updateFilter("category", event.target.value, setCategoryFilter)
+                }
+              >
+                <option value="">Të gjitha kategoritë</option>
+                {Object.entries(categoryLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </NativeSelect>
+            </Field>
+            <Field>
+              <Label htmlFor="mobile-status-filter">Statusi</Label>
+              <NativeSelect
+                id="mobile-status-filter"
+                value={statusFilter}
+                onChange={(event) => updateFilter("status", event.target.value, setStatusFilter)}
+              >
+                <option value="">Çdo status</option>
+                <option value="voting_open">Votimi i hapur</option>
+                <option value="pending_review">Në shqyrtim</option>
+                <option value="voting_closed">Votimi i mbyllur</option>
+                <option value="awaiting_response">Në pritje të përgjigjes</option>
+                <option value="responded">Me përgjigje</option>
+              </NativeSelect>
+            </Field>
+            <div className="mobile-filter-sheet-actions">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setQuery("");
+                  setCategoryFilter("");
+                  setStatusFilter("");
+                  window.history.replaceState(null, "", "/#propozimet");
+                }}
+              >
+                Pastro filtrat
+              </Button>
+              <Button onClick={() => setDialog(null)}>Shfaq {visible.length} rezultate</Button>
+            </div>
+          </div>
+        </DialogShell>
       )}
       {dialog === "notification" && <NotificationDialog onClose={() => setDialog(null)} />}
       {dialog === "otp" && (
@@ -1059,11 +1186,21 @@ function OtpDialog({
     >
       <div className="privacy-callout">
         <ShieldCheck />
-        <p>
-          <strong>Kufiri i privatësisë</strong> Shërbimi i propozimeve dhe votimit nuk e merr
-          numrin. Në këtë beta, shërbimi i izoluar i Kuvend dhe ofruesi SMS do ta përpunonin
-          përkohësisht.
-        </p>
+        <div>
+          <strong>Kufiri i privatësisë</strong>
+          <p>
+            Shërbimi i propozimeve dhe votimit nuk e merr numrin. Në këtë beta, shërbimi i izoluar i
+            Kuvend dhe ofruesi SMS do ta përpunonin përkohësisht.
+          </p>
+          <ul className="trust-checks">
+            <li>OTP provon vetëm kontrollin e numrit.</li>
+            <li>Dëshmia zgjat 30 ditë dhe përdoret pa profil qytetar.</li>
+            <li>Mund të lexosh dhe të mbyllësh dritaren pa vazhduar.</li>
+          </ul>
+          <a className="trust-inline-link" href="/privatesia#si-mbrohet-vota">
+            Lexo shpjegimin e plotë
+          </a>
+        </div>
       </div>
       {!challenge ? (
         <>
@@ -1106,6 +1243,120 @@ function OtpDialog({
         </>
       )}
       {error && <p className="error">{error}</p>}
+    </DialogShell>
+  );
+}
+
+function ArgumentCard({ argument }: { argument: ArgumentRecord }) {
+  return (
+    <blockquote className={`argument-card ${argument.position}`}>
+      <span>{argument.position === "for" ? "Pro" : "Kundër"}</span>
+      <p>{argument.body}</p>
+      <cite>{argument.publicAuthorName ?? argument.pseudonym}</cite>
+      {argument.evidence.length > 0 && <EvidenceList items={argument.evidence} />}
+    </blockquote>
+  );
+}
+
+function ArgumentListDialog({
+  arguments: proposalArguments,
+  onClose,
+}: {
+  arguments: ArgumentRecord[];
+  onClose: () => void;
+}) {
+  const argumentsFor = proposalArguments.filter((argument) => argument.position === "for");
+  const argumentsAgainst = proposalArguments.filter((argument) => argument.position === "against");
+
+  return (
+    <DialogShell
+      title="Të gjitha argumentet"
+      subtitle="Lexoji të dyja anët para se të marrësh një vendim. Argumentet renditen nga më të rejat."
+      onClose={onClose}
+    >
+      <div className="argument-dialog-columns">
+        <section aria-labelledby="all-arguments-for">
+          <div className="argument-column-heading for">
+            <span id="all-arguments-for">
+              <Check size={16} /> Pro
+            </span>
+            <strong>{argumentsFor.length}</strong>
+          </div>
+          <div className="argument-dialog-list">
+            {[...argumentsFor].reverse().map((argument) => (
+              <ArgumentCard key={argument.id} argument={argument} />
+            ))}
+          </div>
+        </section>
+        <section aria-labelledby="all-arguments-against">
+          <div className="argument-column-heading against">
+            <span id="all-arguments-against">
+              <X size={16} /> Kundër
+            </span>
+            <strong>{argumentsAgainst.length}</strong>
+          </div>
+          <div className="argument-dialog-list">
+            {[...argumentsAgainst].reverse().map((argument) => (
+              <ArgumentCard key={argument.id} argument={argument} />
+            ))}
+          </div>
+        </section>
+      </div>
+    </DialogShell>
+  );
+}
+
+function VoteHelpDialog({ onClose }: { onClose: () => void }) {
+  return (
+    <DialogShell
+      title="Si funksionon vota"
+      subtitle="Këto hapa ndodhin pa u larguar nga propozimi."
+      onClose={onClose}
+    >
+      <ol className="vote-help-steps">
+        <li>
+          <span>1</span>
+          <div>
+            <strong>Shikon pjesëmarrjen</strong>
+            <p>Para votës shfaqet vetëm numri i pjesëmarrësve, jo ndarja e rezultatit.</p>
+          </div>
+        </li>
+        <li>
+          <span>2</span>
+          <div>
+            <strong>Zgjedh një anë</strong>
+            <p>
+              Zgjidh “Mbështes” ose “Kundërshtoj”. Mund ta kontrollosh zgjedhjen para konfirmimit.
+            </p>
+          </div>
+        </li>
+        <li>
+          <span>3</span>
+          <div>
+            <strong>Verifikohesh kur duhet</strong>
+            <p>
+              Telefoni përdoret nga shërbimi i izoluar. Numri nuk i dërgohet shërbimit të votimit.
+            </p>
+          </div>
+        </li>
+        <li>
+          <span>4</span>
+          <div>
+            <strong>Konfirmon votën përfundimtare</strong>
+            <p>Pranohet vetëm një votë për këtë propozim. Pas konfirmimit shikon rezultatin.</p>
+          </div>
+        </li>
+        <li>
+          <span>5</span>
+          <div>
+            <strong>Merr mandatin</strong>
+            <p>Mandati mbahet nga ti dhe të ndihmon të kontrollosh përfshirjen pas mbylljes.</p>
+          </div>
+        </li>
+      </ol>
+      <div className="dialog-actions">
+        <Button onClick={onClose}>E kuptova</Button>
+      </div>
     </DialogShell>
   );
 }
@@ -1480,6 +1731,13 @@ function ReceiptDialog({
       <div className="receipt">
         <Check />
         <code>{receipt}</code>
+      </div>
+      <div className="receipt-trust">
+        <ShieldCheck />
+        <p>
+          Mandati kontrollon përfshirjen. Ai nuk përmban numrin tënd dhe nuk duhet publikuar si
+          provë e zgjedhjes sate.
+        </p>
       </div>
       <div className="dialog-actions">
         <Button variant="outline" onClick={download}>

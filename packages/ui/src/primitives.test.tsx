@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import axe from "axe-core";
 import { describe, expect, it } from "vitest";
 import {
@@ -8,9 +8,12 @@ import {
   FieldDescription,
   FieldLegend,
   FileUploader,
+  ExternalResearchActions,
   Input,
   Label,
   ProposalCard,
+  PublicSiteFooter,
+  PublicSiteHeader,
   SearchField,
   TrustNotice,
 } from "./index";
@@ -109,5 +112,69 @@ describe("Kuvend UI", () => {
     expect(
       result.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? "")),
     ).toEqual([]);
+  });
+  it("does not select a provider before an explicit choice and restores focus", async () => {
+    const selections: string[] = [];
+    render(
+      <ExternalResearchActions
+        actions={[
+          {
+            id: "chatgpt",
+            label: "Pyet ChatGPT",
+            description: "Kopjon pyetjen dhe hap ChatGPT.",
+            icon: "chatgpt",
+          },
+          {
+            id: "google",
+            label: "Kërko në Google",
+            description: "Kërkon burime të tjera në web.",
+            icon: "google",
+          },
+        ]}
+        onSelect={(id) => selections.push(id)}
+      />,
+    );
+    expect(selections).toEqual([]);
+    const trigger = screen.getByRole("button", { name: "Hulumto me AI ose Google" });
+    fireEvent.click(trigger);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText(/Ai mund të shohë adresën tënde IP/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Pyet ChatGPT/ }));
+    expect(selections).toEqual(["chatgpt"]);
+    await waitFor(() => expect(trigger).toHaveFocus());
+  });
+  it("keeps public navigation and trust links consistent across pages", () => {
+    render(
+      <>
+        <PublicSiteHeader active="trust" />
+        <main>
+          <h1>Qendra e besimit</h1>
+        </main>
+        <PublicSiteFooter />
+      </>,
+    );
+    expect(
+      within(screen.getByRole("navigation", { name: "Kryesor" })).getByRole("link", {
+        name: "Besimi",
+      }),
+    ).toHaveAttribute("aria-current", "page");
+    fireEvent.click(screen.getByRole("button", { name: "Hap menunë" }));
+    expect(screen.getByRole("navigation", { name: "Menuja celulare" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Qendra e besimit" })).toHaveAttribute(
+      "href",
+      "/besimi",
+    );
+    expect(screen.getByRole("link", { name: "privacy@kuvend.org" })).toHaveAttribute(
+      "href",
+      "mailto:privacy@kuvend.org",
+    );
+    expect(screen.getByRole("link", { name: "Propozo" })).toHaveAttribute(
+      "href",
+      "/?action=proposal",
+    );
+    expect(screen.getByRole("link", { name: "Njoftimet" })).toHaveAttribute(
+      "href",
+      "/?action=notifications",
+    );
   });
 });

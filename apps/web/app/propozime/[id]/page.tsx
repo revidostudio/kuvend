@@ -1,30 +1,22 @@
 import type { Metadata } from "next";
+import type { ProposalRecord } from "@kuvend/contracts";
 import { KuvendApp } from "../../kuvend-app";
+import { fallbackProposals } from "../../../features/kuvend/fallback-data";
 import { publicProposalPreviews } from "../../seo-data";
 import { extractProposalId, proposalPath, proposalSegment } from "../../proposal-url";
 
 const civicUrl =
   process.env.CIVIC_API_URL ?? process.env.NEXT_PUBLIC_CIVIC_API_URL ?? "http://localhost:4000";
 
-interface ProposalPreview {
-  id: string;
-  title: string;
-  summary: string;
-  pseudonym?: string;
-  opensAt?: string;
-  votingRound?: { opensAt: string; closesAt: string };
-}
-
 export function generateStaticParams() {
   return publicProposalPreviews.map((proposal) => ({ id: proposalSegment(proposal) }));
 }
 
-async function getProposal(id: string): Promise<ProposalPreview | undefined> {
-  const local = publicProposalPreviews.find((proposal) => proposal.id === id) as
-    ProposalPreview | undefined;
+async function getProposal(id: string): Promise<ProposalRecord | undefined> {
+  const local = fallbackProposals.find((proposal) => proposal.id === id);
   try {
     const response = await fetch(`${civicUrl}/v1/proposals/${id}`, { next: { revalidate: 60 } });
-    if (response.ok) return (await response.json()).proposal as ProposalPreview;
+    if (response.ok) return (await response.json()).proposal as ProposalRecord;
   } catch {}
   return local;
 }
@@ -68,15 +60,16 @@ export default async function ProposalPage({ params }: { params: Promise<{ id: s
         url: `https://kuvend.org${proposalPath(proposal)}`,
         inLanguage: "sq-AL",
         author: { "@type": "Person", name: proposal.pseudonym ?? "Pjesëmarrës anonim" },
-        ...(proposal.votingRound?.opensAt || proposal.opensAt
-          ? { datePublished: proposal.votingRound?.opensAt ?? proposal.opensAt }
-          : {}),
+        ...(proposal.votingRound?.opensAt ? { datePublished: proposal.votingRound.opensAt } : {}),
         isPartOf: { "@type": "WebSite", name: "Kuvend", url: "https://kuvend.org" },
       }
     : null;
   return (
     <>
-      <KuvendApp initialSelectedId={proposalId} />
+      <KuvendApp
+        initialSelectedId={proposalId}
+        {...(proposal ? { initialProposal: proposal } : {})}
+      />
       {structuredData && (
         <script
           type="application/ld+json"
