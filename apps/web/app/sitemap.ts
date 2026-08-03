@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { isPublicProposalStatus, type ProposalStatus } from "@kuvend/contracts";
 import { publicProposalPreviews } from "./seo-data";
 import { proposalPath } from "./proposal-url";
 
@@ -10,6 +11,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     id: string;
     title: string;
     opensAt?: string;
+    status?: ProposalStatus;
     votingRound?: { opensAt: string };
   }> = [...publicProposalPreviews];
   try {
@@ -33,11 +35,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly" as const,
       priority: 0.5,
     })),
-    ...proposals.map((proposal) => ({
-      url: `https://kuvend.org${proposalPath(proposal)}`,
-      lastModified: new Date(proposal.votingRound?.opensAt ?? proposal.opensAt ?? Date.now()),
-      changeFrequency: "daily" as const,
-      priority: 0.8,
-    })),
+    ...proposals
+      .filter((proposal) => !proposal.status || isPublicProposalStatus(proposal.status))
+      .map((proposal) => ({
+        url: `https://kuvend.org${proposalPath(proposal)}`,
+        lastModified: new Date(proposal.votingRound?.opensAt ?? proposal.opensAt ?? Date.now()),
+        changeFrequency: "daily" as const,
+        priority: 0.8,
+      })),
   ];
 }

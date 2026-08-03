@@ -6,6 +6,7 @@ import {
   createArgumentSchema,
   createProposalSchema,
   institutionalResponseSchema,
+  isPublicProposalStatus,
   moderationDecisionSchema,
   reviseProposalSchema,
   withdrawProposalSchema,
@@ -37,12 +38,17 @@ export function buildApp(store: CivicStore) {
   app.get("/health", async () => ({ ok: true, syntheticOnly: true, store: store.kind }));
   app.get("/v1/proposals", async () => {
     await store.closeExpiredRounds();
-    return { proposals: await store.list(), advisory: true };
+    const proposals = (await store.list()).filter((proposal) =>
+      isPublicProposalStatus(proposal.status),
+    );
+    return { proposals, advisory: true };
   });
   app.get<{ Params: { id: string } }>("/v1/proposals/:id", async (request, reply) => {
     await store.closeExpiredRounds();
     const proposal = await store.get(request.params.id);
-    return proposal ? { proposal } : reply.code(404).send({ error: "proposal_not_found" });
+    return proposal && isPublicProposalStatus(proposal.status)
+      ? { proposal }
+      : reply.code(404).send({ error: "proposal_not_found" });
   });
 
   app.post("/v1/proposals", async (request, reply) => {

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { castBallotSchema, createArgumentSchema, createProposalSchema } from "./index.js";
+import {
+  castBallotSchema,
+  createArgumentSchema,
+  createProposalSchema,
+  isPublicProposalStatus,
+  proposalStatuses,
+  publicProposalStatuses,
+} from "./index.js";
 
 const baseProposal = {
   title: "Ndriçim më i mirë pranë shkollave",
@@ -14,6 +21,19 @@ const baseProposal = {
 };
 
 describe("privacy-boundary contracts", () => {
+  it("publishes only proposals that completed moderation", () => {
+    expect(proposalStatuses.filter(isPublicProposalStatus)).toEqual(publicProposalStatuses);
+    for (const status of [
+      "pending_review",
+      "needs_changes",
+      "duplicate",
+      "rejected",
+      "withdrawn",
+    ] as const) {
+      expect(isPublicProposalStatus(status)).toBe(false);
+    }
+  });
+
   it("rejects identity fields in a civic proposal", () => {
     const result = createProposalSchema.safeParse({ ...baseProposal, phone: "+355690000000" });
     expect(result.success).toBe(false);
