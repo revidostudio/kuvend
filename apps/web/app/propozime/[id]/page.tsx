@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import type { ProposalRecord } from "@kuvend/contracts";
+import { isPublicProposalStatus, type ProposalRecord } from "@kuvend/contracts";
 import { KuvendApp } from "../../kuvend-app";
 import { fallbackProposals } from "../../../features/kuvend/fallback-data";
 import { publicProposalPreviews } from "../../seo-data";
@@ -16,9 +16,12 @@ async function getProposal(id: string): Promise<ProposalRecord | undefined> {
   const local = fallbackProposals.find((proposal) => proposal.id === id);
   try {
     const response = await fetch(`${civicUrl}/v1/proposals/${id}`, { next: { revalidate: 60 } });
-    if (response.ok) return (await response.json()).proposal as ProposalRecord;
+    if (response.ok) {
+      const proposal = (await response.json()).proposal as ProposalRecord;
+      if (isPublicProposalStatus(proposal.status)) return proposal;
+    }
   } catch {}
-  return local;
+  return local && isPublicProposalStatus(local.status) ? local : undefined;
 }
 
 export async function generateMetadata({
