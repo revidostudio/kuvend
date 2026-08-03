@@ -11,7 +11,8 @@ const viewports = [
 
 export default defineConfig({
   testDir: "tests/e2e",
-  snapshotPathTemplate: "{testDir}/{testFilePath}-snapshots/{arg}-{projectName}.png",
+  snapshotPathTemplate:
+    "{testDir}/{testFilePath}-snapshots/{arg}-{projectName}-{platform}.png",
   fullyParallel: true,
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",
