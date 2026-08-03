@@ -157,7 +157,7 @@ export const NativeSelect = React.forwardRef<HTMLSelectElement, React.ComponentP
         ref={ref}
         data-slot="native-select"
         className={cn(
-          "min-h-11 w-full rounded-md border border-[var(--kuvend-border-strong)] bg-[var(--kuvend-surface-raised)] px-3 text-sm text-[var(--kuvend-ink)] outline-none focus-visible:border-[var(--kuvend-focus)] focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/20",
+          "h-11 min-h-11 w-full rounded-md border border-[var(--kuvend-border-strong)] bg-[var(--kuvend-surface-raised)] px-3 text-sm text-[var(--kuvend-ink)] outline-none focus-visible:border-[var(--kuvend-focus)] focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/20",
           className,
         )}
         {...props}
