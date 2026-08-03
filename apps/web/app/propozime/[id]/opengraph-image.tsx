@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { isPublicProposalStatus, type ProposalRecord } from "@kuvend/contracts";
 import { publicProposalPreviews } from "../../seo-data";
 import { extractProposalId } from "../../proposal-url";
 
@@ -22,7 +23,10 @@ export default async function ProposalOpenGraphImage({
     const response = await fetch(`${civicUrl}/v1/proposals/${proposalId}`, {
       next: { revalidate: 300 },
     });
-    if (response.ok) proposal = (await response.json()).proposal;
+    if (response.ok) {
+      const candidate = (await response.json()).proposal as ProposalRecord;
+      if (isPublicProposalStatus(candidate.status)) proposal = candidate;
+    }
   } catch {}
   return new ImageResponse(
     <div

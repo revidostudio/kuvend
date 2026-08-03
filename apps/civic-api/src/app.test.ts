@@ -28,6 +28,37 @@ describe("civic API", () => {
     expect(response.json().proposals[0].votingRound).not.toHaveProperty("support");
   });
 
+  it("does not expose a proposal before moderation in public catalogue or detail routes", async () => {
+    const store = new MemoryCivicStore();
+    const app = buildApp(store);
+    const created = await store.create({
+      title: "Më shumë strehë në stacionet rurale",
+      problem: "Udhëtarët në shumë stacione rurale presin pa mbrojtje nga shiu dhe dielli.",
+      proposedChange:
+        "Bashkitë të inventarizojnë stacionet dhe të vendosin strehë sipas përdorimit.",
+      scope: "local",
+      category: "transport",
+      evidence: [],
+      authorCapabilityHash: "a".repeat(64),
+      credential: issueSyntheticCredential("development-only-change-me"),
+    });
+
+    const catalogue = await app.inject({ method: "GET", url: "/v1/proposals" });
+    expect(catalogue.statusCode).toBe(200);
+    expect(
+      catalogue
+        .json()
+        .proposals.some((proposal: { id: string }) => proposal.id === created.proposal.id),
+    ).toBe(false);
+
+    const detail = await app.inject({
+      method: "GET",
+      url: `/v1/proposals/${created.proposal.id}`,
+    });
+    expect(detail.statusCode).toBe(404);
+    await app.close();
+  });
+
   it("rejects phone data even with a valid credential", async () => {
     const app = buildApp(new MemoryCivicStore());
     const response = await app.inject({
@@ -49,7 +80,8 @@ describe("civic API", () => {
   });
 
   it("supports capability revisions, two-review rejection, and appeals", async () => {
-    const app = buildApp(new MemoryCivicStore());
+    const store = new MemoryCivicStore();
+    const app = buildApp(store);
     const capabilitySecret = randomUUID();
     const created = await app.inject({
       method: "POST",
@@ -100,8 +132,10 @@ describe("civic API", () => {
       });
       expect(decision.statusCode).toBe(200);
     }
-    const rejected = await app.inject({ method: "GET", url: `/v1/proposals/${id}` });
-    expect(rejected.json().proposal.status).toBe("rejected");
+    const rejected = await store.get(id);
+    expect(rejected?.status).toBe("rejected");
+    const publicDetail = await app.inject({ method: "GET", url: `/v1/proposals/${id}` });
+    expect(publicDetail.statusCode).toBe(404);
 
     const appeal = await app.inject({
       method: "POST",
