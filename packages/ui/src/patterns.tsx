@@ -3,6 +3,7 @@
 import * as React from "react";
 import {
   ArrowLeft,
+  Bell,
   Check,
   ChevronRight,
   FileText,
@@ -10,62 +11,266 @@ import {
   Info,
   LockKeyhole,
   Menu,
+  Plus,
+  Search,
   ShieldCheck,
   UploadCloud,
   Video,
   X,
 } from "lucide-react";
-import { Button, Card, CardContent, Progress, ProgressLabel, ProgressValue } from "./primitives";
+import { siClaude, siGoogle, siOpenai } from "simple-icons";
+import {
+  Button,
+  buttonVariants,
+  Card,
+  CardContent,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  Progress,
+  ProgressLabel,
+  ProgressValue,
+} from "./primitives";
 import { cn } from "./lib";
 
-export function AppShell({
-  children,
-  action,
-  active = "proposals",
+export type PublicNavigationSection = "proposals" | "how" | "trust";
+
+const publicNavigation = [
+  { id: "proposals", label: "Propozimet", href: "/" },
+  { id: "how", label: "Si funksionon", href: "/si-funksionon" },
+  { id: "trust", label: "Besimi", href: "/besimi" },
+] as const;
+
+export function PublicSiteHeader({
+  active,
+  onNotifications,
+  onPropose,
 }: {
-  children: React.ReactNode;
-  action?: React.ReactNode;
-  active?: "proposals" | "how" | "transparency";
+  active?: PublicNavigationSection;
+  onNotifications?: () => void;
+  onPropose?: () => void;
 }) {
-  const links = [
-    { id: "proposals", label: "Propozimet", href: "/" },
-    { id: "how", label: "Si funksionon", href: "/#si-funksionon" },
-    { id: "transparency", label: "Transparenca", href: "/transparenca" },
-  ] as const;
+  const [menuOpen, setMenuOpen] = React.useState(false);
+
+  const notificationAction = onNotifications ? (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      aria-label="Njoftimet"
+      title="Njoftimet"
+      onClick={onNotifications}
+    >
+      <Bell />
+    </Button>
+  ) : (
+    <a
+      data-slot="button"
+      data-variant="ghost"
+      aria-label="Njoftimet"
+      title="Njoftimet"
+      href="/?action=notifications"
+      className={buttonVariants({ variant: "ghost", size: "icon" })}
+    >
+      <Bell />
+    </a>
+  );
+
+  const proposeAction = onPropose ? (
+    <Button type="button" size="sm" className="min-w-11" aria-label="Propozo" onClick={onPropose}>
+      <Plus /> <span className="hidden sm:inline">Propozo</span>
+    </Button>
+  ) : (
+    <a
+      data-slot="button"
+      data-variant="primary"
+      aria-label="Propozo"
+      href="/?action=proposal"
+      className={cn(buttonVariants({ size: "sm" }), "min-w-11")}
+    >
+      <Plus /> <span className="hidden sm:inline">Propozo</span>
+    </a>
+  );
+
   return (
-    <div className="min-h-dvh bg-[var(--kuvend-canvas)] text-[var(--kuvend-ink)]">
-      <header className="sticky top-0 z-40 border-b border-[var(--kuvend-border)] bg-[var(--kuvend-canvas)]/95 backdrop-blur">
-        <div className="mx-auto flex min-h-16 max-w-[var(--kuvend-content)] items-center gap-4 px-4 sm:px-6">
-          <Button variant="ghost" size="icon" className="md:hidden" aria-label="Hap menunë">
-            <Menu />
-          </Button>
-          <a
-            href="/"
-            className="mr-auto text-xl font-bold tracking-tight text-[var(--kuvend-ink)] sm:text-2xl"
+    <header
+      data-slot="public-header"
+      className="sticky top-0 z-40 border-b border-[var(--kuvend-border)] bg-[var(--kuvend-surface-raised)]/95 backdrop-blur"
+    >
+      <div className="relative mx-auto flex min-h-16 max-w-[var(--kuvend-content)] items-center gap-2 px-4 sm:px-6 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:gap-6">
+        <a
+          href="/"
+          aria-label="Kuvend, kreu"
+          className="mr-auto inline-flex min-h-11 items-center gap-2.5 rounded-md text-xl font-extrabold tracking-[-0.035em] text-[var(--kuvend-ink)] outline-none focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/25 lg:mr-0 lg:justify-self-start"
+        >
+          <img src="/mark.svg" alt="" className="size-7" />
+          <span>Kuvend</span>
+        </a>
+        <nav aria-label="Kryesor" className="hidden h-16 items-stretch lg:flex">
+          {publicNavigation.map((link) => (
+            <a
+              key={link.id}
+              href={link.href}
+              aria-current={active === link.id ? "page" : undefined}
+              className="relative flex min-w-32 items-center justify-center px-4 text-sm font-medium text-[var(--kuvend-ink-soft)] outline-none hover:bg-[var(--kuvend-surface)] hover:text-[var(--kuvend-ink)] focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-[var(--kuvend-focus)]/25 aria-[current=page]:font-semibold aria-[current=page]:text-[var(--kuvend-ink)] aria-[current=page]:after:absolute aria-[current=page]:after:inset-x-4 aria-[current=page]:after:bottom-0 aria-[current=page]:after:h-0.5 aria-[current=page]:after:bg-[var(--kuvend-red)]"
+            >
+              {link.label}
+            </a>
+          ))}
+        </nav>
+        <div className="flex items-center justify-end gap-1.5 lg:justify-self-end">
+          {notificationAction}
+          {proposeAction}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="lg:hidden"
+            aria-label={menuOpen ? "Mbyll menunë" : "Hap menunë"}
+            aria-expanded={menuOpen}
+            aria-controls="public-mobile-menu"
+            onClick={() => setMenuOpen((value) => !value)}
           >
-            Kuvend
-          </a>
-          <nav aria-label="Kryesor" className="hidden items-stretch self-stretch md:flex">
-            {links.map((link) => (
+            {menuOpen ? <X /> : <Menu />}
+          </Button>
+        </div>
+        {menuOpen && (
+          <nav
+            id="public-mobile-menu"
+            aria-label="Menuja celulare"
+            className="absolute inset-x-0 top-full z-50 grid gap-1 border-y border-[var(--kuvend-border)] bg-[var(--kuvend-surface-raised)] p-3 shadow-[var(--kuvend-shadow-overlay)] lg:hidden"
+          >
+            {publicNavigation.map((link) => (
               <a
                 key={link.id}
                 href={link.href}
                 aria-current={active === link.id ? "page" : undefined}
-                className="relative flex items-center px-4 text-sm font-medium text-[var(--kuvend-ink-soft)] hover:text-[var(--kuvend-ink)] aria-[current=page]:text-[var(--kuvend-ink)] aria-[current=page]:after:absolute aria-[current=page]:after:inset-x-4 aria-[current=page]:after:bottom-0 aria-[current=page]:after:h-0.5 aria-[current=page]:after:bg-[var(--kuvend-red)]"
+                onClick={() => setMenuOpen(false)}
+                className="flex min-h-12 items-center rounded-md px-3 text-sm font-semibold text-[var(--kuvend-ink-soft)] outline-none hover:bg-[var(--kuvend-surface)] hover:text-[var(--kuvend-ink)] focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/25 aria-[current=page]:border-l-2 aria-[current=page]:border-[var(--kuvend-red)] aria-[current=page]:bg-[var(--kuvend-surface)] aria-[current=page]:text-[var(--kuvend-ink)]"
               >
                 {link.label}
               </a>
             ))}
+            <a
+              href="/transparenca"
+              onClick={() => setMenuOpen(false)}
+              className="flex min-h-12 items-center rounded-md px-3 text-sm font-semibold text-[var(--kuvend-ink-soft)] outline-none hover:bg-[var(--kuvend-surface)] hover:text-[var(--kuvend-ink)] focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/25"
+            >
+              Transparenca e plotë
+            </a>
           </nav>
-          {action}
+        )}
+      </div>
+      <a
+        data-slot="public-trust-strip"
+        href="/besimi"
+        className="flex min-h-11 items-center justify-center gap-2 border-t border-[var(--kuvend-border)] bg-[var(--kuvend-ink)] px-4 py-2 text-center text-xs text-[var(--kuvend-surface-raised)] outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-[var(--kuvend-focus)]"
+      >
+        <ShieldCheck className="size-3.5 text-[var(--kuvend-red)]" />
+        <strong>Beta sintetike.</strong>
+        <span>I pavarur dhe joqeveritar.</span>
+        <span className="font-semibold underline underline-offset-2">Çfarë garanton?</span>
+      </a>
+    </header>
+  );
+}
+
+export function PublicSiteFooter() {
+  return (
+    <footer
+      data-slot="public-footer"
+      className="border-t border-[var(--kuvend-border)] bg-[var(--kuvend-surface)]"
+    >
+      <div
+        data-slot="public-footer-grid"
+        className="mx-auto grid max-w-[var(--kuvend-content)] gap-8 px-4 py-10 sm:px-6 md:grid-cols-[1.3fr_1fr_1fr]"
+      >
+        <div data-slot="public-footer-intro" className="grid content-start gap-3">
+          <a
+            href="/"
+            className="inline-flex min-h-11 w-fit items-center gap-2.5 rounded-md text-xl font-extrabold tracking-[-0.035em] text-[var(--kuvend-ink)] outline-none focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/25"
+          >
+            <img src="/mark.svg" alt="" className="size-7" /> Kuvend
+          </a>
+          <p className="max-w-sm text-sm leading-6 text-[var(--kuvend-ink-soft)]">
+            Infrastrukturë qytetare e hapur, e pavarur dhe jokomerciale për propozime dhe votim
+            këshillues.
+          </p>
+          <p className="text-xs leading-5 text-[var(--kuvend-ink-soft)]">
+            Nuk është i lidhur me Kuvendin e Shqipërisë, një parti ose institucion shtetëror.
+          </p>
         </div>
-        <div className="border-t border-[var(--kuvend-border)]">
-          <div className="mx-auto flex h-9 max-w-[var(--kuvend-content)] items-center justify-center gap-2 px-4 text-xs text-[var(--kuvend-ink-soft)]">
-            <ShieldCheck className="size-3.5" /> I pavarur dhe joqeveritar
-          </div>
-        </div>
-      </header>
+        <nav data-slot="public-footer-nav" aria-label="Besimi" className="grid content-start gap-1">
+          <strong className="mb-2 text-sm text-[var(--kuvend-ink)]">Besimi</strong>
+          {[
+            ["/besimi", "Qendra e besimit"],
+            ["/rreth-kuvendit", "Kush qëndron pas Kuvend"],
+            ["/privatesia", "Privatësia"],
+            ["/siguria", "Siguria"],
+            ["/financimi", "Financimi"],
+          ].map(([href, label]) => (
+            <a
+              key={href}
+              href={href}
+              className="flex min-h-11 items-center text-sm text-[var(--kuvend-ink-soft)] outline-none hover:text-[var(--kuvend-ink)] focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/25"
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
+        <nav
+          data-slot="public-footer-nav"
+          aria-label="Rregullat dhe kontakti"
+          className="grid content-start gap-1"
+        >
+          <strong className="mb-2 text-sm text-[var(--kuvend-ink)]">Rregullat dhe kontakti</strong>
+          {[
+            ["/si-funksionon", "Si funksionon"],
+            ["/transparenca", "Transparenca"],
+            ["/moderimi", "Moderimi"],
+            ["/kushtet", "Kushtet e përdorimit"],
+            ["mailto:privacy@kuvend.org", "privacy@kuvend.org"],
+          ].map(([href, label]) => (
+            <a
+              key={href}
+              href={href}
+              className="flex min-h-11 items-center text-sm text-[var(--kuvend-ink-soft)] outline-none hover:text-[var(--kuvend-ink)] focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/25"
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
+      </div>
+      <div className="border-t border-[var(--kuvend-border)] px-4 py-4 text-center text-xs text-[var(--kuvend-ink-soft)]">
+        Kodi është i hapur · Rezultatet janë këshilluese dhe jo përfaqësuese
+      </div>
+    </footer>
+  );
+}
+
+export function AppShell({
+  children,
+  active = "proposals",
+  onNotifications,
+  onPropose,
+}: {
+  children: React.ReactNode;
+  active?: PublicNavigationSection;
+  onNotifications?: () => void;
+  onPropose?: () => void;
+}) {
+  return (
+    <div className="min-h-dvh bg-[var(--kuvend-canvas)] text-[var(--kuvend-ink)]">
+      <PublicSiteHeader
+        active={active}
+        {...(onNotifications ? { onNotifications } : {})}
+        {...(onPropose ? { onPropose } : {})}
+      />
       {children}
+      <PublicSiteFooter />
     </div>
   );
 }
@@ -216,6 +421,84 @@ export function EmptyState({
       <p className="max-w-md text-sm leading-6 text-[var(--kuvend-ink-soft)]">{description}</p>
       {action}
     </div>
+  );
+}
+
+export type ExternalResearchAction = {
+  id: string;
+  label: string;
+  description: string;
+  icon: "chatgpt" | "claude" | "google";
+  disabled?: boolean;
+};
+
+const researchProviderIcons = {
+  chatgpt: siOpenai,
+  claude: siClaude,
+  google: siGoogle,
+};
+
+export function ExternalResearchActions({
+  actions,
+  onSelect,
+}: {
+  actions: ExternalResearchAction[];
+  onSelect: (id: string) => void;
+}) {
+  const [open, setOpen] = React.useState(false);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger render={<Button type="button" variant="outline" size="sm" />}>
+        <Search data-icon="inline-start" /> Hulumto me AI ose Google
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Hulumto këtë propozim</DialogTitle>
+          <DialogDescription>
+            Krahaso pretendimet, kontrollo provat dhe kërko këndvështrime të tjera.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="rounded-lg border border-[var(--kuvend-border)] bg-[var(--kuvend-surface)] p-3 text-sm leading-5 text-[var(--kuvend-ink-soft)]">
+          <strong className="text-[var(--kuvend-ink)]">Po hap një shërbim të jashtëm.</strong> Ai
+          mund të shohë adresën tënde IP dhe tekstin publik të propozimit që përfshihet në lidhje.
+        </div>
+        <div className="grid gap-2">
+          {actions.map((action) => (
+            <Button
+              key={action.id}
+              type="button"
+              variant="outline"
+              disabled={action.disabled}
+              className="h-auto min-h-14 w-full justify-start gap-3 px-3 py-2 text-left"
+              onClick={() => {
+                onSelect(action.id);
+                setOpen(false);
+              }}
+            >
+              <span
+                aria-hidden="true"
+                className="grid size-9 shrink-0 place-items-center rounded-md bg-[var(--kuvend-surface)] text-[var(--kuvend-ink)]"
+              >
+                <svg viewBox="0 0 24 24" className="size-4" focusable="false">
+                  <path d={researchProviderIcons[action.icon].path} fill="currentColor" />
+                </svg>
+              </span>
+              <span className="grid min-w-0 gap-0.5">
+                <span className="font-semibold text-[var(--kuvend-ink)]">{action.label}</span>
+                <span className="whitespace-normal text-xs font-normal leading-4 text-[var(--kuvend-ink-soft)]">
+                  {action.description}
+                </span>
+              </span>
+            </Button>
+          ))}
+        </div>
+        <p className="text-xs leading-5 text-[var(--kuvend-ink-soft)]">
+          Kuvend nuk u dërgon këtyre shërbimeve votën, telefonin, dëshminë anonime apo të dhëna
+          private.
+        </p>
+      </DialogContent>
+    </Dialog>
   );
 }
 

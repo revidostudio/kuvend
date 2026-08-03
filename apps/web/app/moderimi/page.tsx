@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { LegalPage } from "../legal-page";
 
-export const metadata: Metadata = { title: "Rregullat e moderimit — Kuvend" };
+export const metadata: Metadata = {
+  title: "Rregullat e moderimit — Kuvend",
+  alternates: { canonical: "/moderimi" },
+};
 
 export default function ModerationPage() {
   return (

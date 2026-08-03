@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { LegalPage } from "../legal-page";
 
-export const metadata: Metadata = { title: "Kushtet e përdorimit — Kuvend" };
+export const metadata: Metadata = {
+  title: "Kushtet e përdorimit — Kuvend",
+  alternates: { canonical: "/kushtet" },
+};
 
 export default function TermsPage() {
   return (

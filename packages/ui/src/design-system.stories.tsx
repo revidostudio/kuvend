@@ -13,11 +13,14 @@ import {
   CardTitle,
   ChoiceButton,
   EmptyState,
+  ExternalResearchActions,
   Field,
   FileUploader,
   Input,
   Label,
   ProposalCard,
+  PublicSiteFooter,
+  PublicSiteHeader,
   SearchField,
   Skeleton,
   Spinner,
@@ -97,6 +100,29 @@ export const ProductPatterns: Story = {
         turnout={1248}
       />
       <TrustNotice>Shërbimi i propozimeve dhe votimit nuk e merr numrin e telefonit.</TrustNotice>
+      <ExternalResearchActions
+        actions={[
+          {
+            id: "chatgpt",
+            label: "Pyet ChatGPT",
+            description: "Kopjon një pyetje neutrale dhe hap ChatGPT.",
+            icon: "chatgpt",
+          },
+          {
+            id: "claude",
+            label: "Pyet Claude",
+            description: "Kopjon të njëjtën pyetje dhe hap Claude.",
+            icon: "claude",
+          },
+          {
+            id: "google",
+            label: "Kërko në Google",
+            description: "Kërkon burime dhe raportime të tjera në web.",
+            icon: "google",
+          },
+        ]}
+        onSelect={() => undefined}
+      />
       <EmptyState
         title="Nuk u gjet asnjë propozim"
         description="Provo një fjalë tjetër ose hiq filtrat."
@@ -177,5 +203,18 @@ export const NavigationAndHelp: Story = {
         </Tooltip>
       </div>
     </TooltipProvider>
+  ),
+};
+
+export const PublicChrome: Story = {
+  parameters: { layout: "fullscreen" },
+  render: () => (
+    <div className="min-h-dvh bg-[var(--kuvend-canvas)] text-[var(--kuvend-ink)]">
+      <PublicSiteHeader active="trust" />
+      <main className="mx-auto min-h-96 max-w-[var(--kuvend-content)] px-4 py-12 sm:px-6">
+        <h1 className="text-4xl font-bold tracking-tight">Qendra e besimit</h1>
+      </main>
+      <PublicSiteFooter />
+    </div>
   ),
 };

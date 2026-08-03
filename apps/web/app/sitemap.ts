@@ -18,7 +18,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   } catch {}
   return [
     { url: "https://kuvend.org", changeFrequency: "daily", priority: 1 },
-    ...["privatesia", "kushtet", "moderimi", "transparenca"].map((path) => ({
+    ...[
+      "besimi",
+      "rreth-kuvendit",
+      "si-funksionon",
+      "privatesia",
+      "siguria",
+      "financimi",
+      "kushtet",
+      "moderimi",
+      "transparenca",
+    ].map((path) => ({
       url: `https://kuvend.org/${path}`,
       changeFrequency: "monthly" as const,
       priority: 0.5,
