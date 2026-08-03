@@ -1042,7 +1042,7 @@
   font-size: 0.75rem;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 899px) {
   .proposal-list:not(.has-selection) + .proposal-detail {
     display: none;
   }
@@ -1127,7 +1127,7 @@
   }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 900px) {
   .topbar {
     padding-inline: max(1.5rem, calc((100% - var(--kuvend-content)) / 2));
   }
