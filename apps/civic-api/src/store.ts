@@ -131,6 +131,7 @@ export class MemoryCivicStore implements CivicStore {
       body: input.body,
       evidence: input.evidence,
       pseudonym: pseudonyms[Math.floor(Math.random() * pseudonyms.length)] ?? "Fjala e Lirë",
+      ...(input.publicAuthorName ? { publicAuthorName: input.publicAuthorName } : {}),
       createdAt: new Date().toISOString(),
     };
     this.contributionNullifiers.add(input.contributionNullifier);

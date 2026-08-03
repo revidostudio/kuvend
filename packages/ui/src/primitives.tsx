@@ -12,29 +12,30 @@ import { RadioGroup as BaseRadioGroup } from "@base-ui/react/radio-group";
 import { AlertDialog as BaseAlertDialog } from "@base-ui/react/alert-dialog";
 import { Drawer as BaseDrawer } from "@base-ui/react/drawer";
 import { cva, type VariantProps } from "class-variance-authority";
-import { Check, X, ChevronDown, LoaderCircle } from "lucide-react";
+import { Check, X, ChevronDown, LoaderCircle, Search } from "lucide-react";
 import { Toaster as SonnerToaster, toast } from "sonner";
 import { cn } from "./lib";
 
 export const buttonVariants = cva(
-  "inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-md border border-transparent px-4 text-sm font-semibold outline-none transition-colors duration-150 focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/30 disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-transparent px-4 text-sm font-medium outline-none transition-all duration-200 focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/30 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        primary: "bg-[var(--kuvend-red)] text-white hover:bg-[var(--kuvend-red-hover)]",
-        default: "bg-[var(--kuvend-red)] text-white hover:bg-[var(--kuvend-red-hover)]",
+        primary: "text-white",
+        default: "text-white",
         outline:
-          "border-[var(--kuvend-border-strong)] bg-[var(--kuvend-canvas)] text-[var(--kuvend-ink)] hover:bg-[var(--kuvend-surface)]",
+          "border-transparent bg-[var(--kuvend-surface-raised)] text-[var(--kuvend-ink)] ring-1 ring-[var(--kuvend-border)] hover:bg-[var(--kuvend-surface)] hover:ring-[var(--kuvend-border-strong)]",
         secondary:
           "bg-[var(--kuvend-surface)] text-[var(--kuvend-ink)] hover:bg-[var(--kuvend-border)]",
-        ghost: "text-[var(--kuvend-ink)] hover:bg-[var(--kuvend-surface)]",
+        ghost:
+          "text-[var(--kuvend-ink-soft)] hover:bg-[var(--kuvend-surface)] hover:text-[var(--kuvend-ink)]",
         destructive: "bg-[var(--kuvend-danger)] text-white hover:opacity-90",
         link: "min-h-0 px-0 text-[var(--kuvend-red)] underline-offset-4 hover:underline",
       },
       size: {
         default: "min-h-11",
         sm: "min-h-11 px-3 text-sm sm:min-h-9",
-        lg: "min-h-12 px-5 text-base",
+        lg: "min-h-12 px-6 text-base",
         icon: "size-11 min-h-11 p-0",
       },
     },
@@ -51,7 +52,53 @@ export function Button({
   return (
     <BaseButton
       data-slot="button"
+      data-variant={variant ?? "primary"}
       className={cn(buttonVariants({ variant, size }), className)}
+      {...props}
+    />
+  );
+}
+
+export function ChoiceButton({
+  selected = false,
+  tone = "neutral",
+  className,
+  style,
+  ...props
+}: Omit<BaseButton.Props, "aria-pressed"> & {
+  selected?: boolean;
+  tone?: "neutral" | "success" | "danger";
+}) {
+  const selectedTone = {
+    neutral: ["var(--kuvend-accent)", "var(--kuvend-accent-soft)"],
+    success: ["var(--kuvend-success)", "var(--kuvend-success-soft)"],
+    danger: ["var(--kuvend-danger)", "var(--kuvend-danger-soft)"],
+  }[tone];
+  return (
+    <Button
+      variant="outline"
+      aria-pressed={selected}
+      data-selected={selected ? "true" : "false"}
+      data-tone={tone}
+      style={{
+        borderColor: selected ? selectedTone[0] : "transparent",
+        background: selected ? selectedTone[1] : "var(--kuvend-surface-raised)",
+        color: selected ? selectedTone[0] : "var(--kuvend-ink)",
+        ...style,
+      }}
+      className={cn(
+        "font-semibold",
+        selected &&
+          tone === "neutral" &&
+          "border-[var(--kuvend-accent)] bg-[var(--kuvend-accent-soft)] text-[var(--kuvend-accent)] ring-[var(--kuvend-accent)] hover:bg-[var(--kuvend-accent-soft)]",
+        selected &&
+          tone === "success" &&
+          "border-[var(--kuvend-success)] bg-[var(--kuvend-success-soft)] text-[var(--kuvend-success)] ring-[var(--kuvend-success)] hover:bg-[var(--kuvend-success-soft)]",
+        selected &&
+          tone === "danger" &&
+          "border-[var(--kuvend-danger)] bg-[var(--kuvend-danger-soft)] text-[var(--kuvend-danger)] ring-[var(--kuvend-danger)] hover:bg-[var(--kuvend-danger-soft)]",
+        className,
+      )}
       {...props}
     />
   );
@@ -64,11 +111,25 @@ export const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"in
         ref={ref}
         data-slot="input"
         className={cn(
-          "min-h-11 w-full rounded-md border border-[var(--kuvend-border-strong)] bg-[var(--kuvend-canvas)] px-3 text-base text-[var(--kuvend-ink)] outline-none placeholder:text-[var(--kuvend-ink-soft)] focus-visible:border-[var(--kuvend-focus)] focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/20 disabled:bg-[var(--kuvend-surface)] disabled:opacity-70 sm:text-sm",
+          "min-h-11 w-full rounded-md border border-[var(--kuvend-border-strong)] bg-[var(--kuvend-surface-raised)] px-3 text-base text-[var(--kuvend-ink)] outline-none placeholder:text-[var(--kuvend-ink-soft)] focus-visible:border-[var(--kuvend-focus)] focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/20 disabled:bg-[var(--kuvend-surface)] disabled:opacity-70 sm:text-sm",
           className,
         )}
         {...props}
       />
+    );
+  },
+);
+
+export const SearchField = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
+  function SearchField({ className, type = "search", ...props }, ref) {
+    return (
+      <div data-slot="search-field" className="relative w-full text-[var(--kuvend-ink-soft)]">
+        <Search
+          aria-hidden="true"
+          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2"
+        />
+        <Input ref={ref} type={type} className={cn("pl-10", className)} {...props} />
+      </div>
     );
   },
 );
@@ -80,7 +141,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentPro
         ref={ref}
         data-slot="textarea"
         className={cn(
-          "min-h-28 w-full resize-y rounded-md border border-[var(--kuvend-border-strong)] bg-[var(--kuvend-canvas)] px-3 py-2.5 text-base leading-6 text-[var(--kuvend-ink)] outline-none placeholder:text-[var(--kuvend-ink-soft)] focus-visible:border-[var(--kuvend-focus)] focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/20 disabled:bg-[var(--kuvend-surface)] disabled:opacity-70 sm:text-sm",
+          "min-h-28 w-full resize-y rounded-md border border-[var(--kuvend-border-strong)] bg-[var(--kuvend-surface-raised)] px-3 py-2.5 text-base leading-6 text-[var(--kuvend-ink)] outline-none placeholder:text-[var(--kuvend-ink-soft)] focus-visible:border-[var(--kuvend-focus)] focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/20 disabled:bg-[var(--kuvend-surface)] disabled:opacity-70 sm:text-sm",
           className,
         )}
         {...props}
@@ -96,7 +157,7 @@ export const NativeSelect = React.forwardRef<HTMLSelectElement, React.ComponentP
         ref={ref}
         data-slot="native-select"
         className={cn(
-          "min-h-11 w-full rounded-md border border-[var(--kuvend-border-strong)] bg-[var(--kuvend-canvas)] px-3 text-sm text-[var(--kuvend-ink)] outline-none focus-visible:border-[var(--kuvend-focus)] focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/20",
+          "min-h-11 w-full rounded-md border border-[var(--kuvend-border-strong)] bg-[var(--kuvend-surface-raised)] px-3 text-sm text-[var(--kuvend-ink)] outline-none focus-visible:border-[var(--kuvend-focus)] focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/20",
           className,
         )}
         {...props}
@@ -140,6 +201,28 @@ export function FieldGroup({ className, ...props }: React.ComponentProps<"div">)
   return <div className={cn("grid gap-5", className)} {...props} />;
 }
 export const FieldLabel = Label;
+export function FieldLegend({
+  className,
+  optional,
+  children,
+  ...props
+}: React.ComponentProps<"legend"> & { optional?: boolean }) {
+  return (
+    <legend
+      data-slot="field-legend"
+      className={cn("text-sm font-semibold text-[var(--kuvend-ink)]", className)}
+      {...props}
+    >
+      {children}
+      {optional && (
+        <>
+          {" "}
+          <span className="font-normal text-[var(--kuvend-ink-soft)]">Opsionale</span>
+        </>
+      )}
+    </legend>
+  );
+}
 export function FieldDescription({ className, ...props }: React.ComponentProps<"p">) {
   return (
     <p className={cn("text-sm leading-5 text-[var(--kuvend-ink-soft)]", className)} {...props} />
@@ -262,6 +345,10 @@ export function Progress({
 }: React.ComponentProps<"div"> & { value?: number }) {
   return (
     <div
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.max(0, Math.min(100, value))}
       className={cn(
         "grid grid-cols-[1fr_auto] gap-2 text-xs font-medium text-[var(--kuvend-ink-soft)]",
         className,
@@ -292,7 +379,7 @@ export function SelectTrigger({ className, children, ...props }: BaseSelect.Trig
   return (
     <BaseSelect.Trigger
       className={cn(
-        "flex min-h-11 w-full items-center justify-between rounded-md border border-[var(--kuvend-border-strong)] bg-[var(--kuvend-canvas)] px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/20",
+        "flex min-h-11 w-full items-center justify-between rounded-md border border-[var(--kuvend-border-strong)] bg-[var(--kuvend-surface-raised)] px-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/20",
         className,
       )}
       {...props}
@@ -391,11 +478,15 @@ export function DialogContent({ children, className, ...props }: BaseDialog.Popu
       <BaseDialog.Backdrop className="fixed inset-0 z-50 bg-[var(--kuvend-ink)]/20 backdrop-blur-[2px]" />
       <BaseDialog.Popup
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-lg border border-[var(--kuvend-border)] bg-[var(--kuvend-canvas)] p-5 shadow-[var(--kuvend-shadow-overlay)] outline-none",
+          "fixed inset-x-0 bottom-0 z-50 grid max-h-[calc(100dvh-0.5rem)] w-full max-w-none gap-4 overflow-y-auto rounded-t-xl border border-b-0 border-[var(--kuvend-border)] bg-[var(--kuvend-canvas)] p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-[var(--kuvend-shadow-overlay)] outline-none sm:bottom-auto sm:left-1/2 sm:right-auto sm:top-1/2 sm:w-[calc(100%-2rem)] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-lg sm:border sm:pb-5",
           className,
         )}
         {...props}
       >
+        <div
+          aria-hidden="true"
+          className="mx-auto -mb-1 h-1 w-10 rounded-full bg-[var(--kuvend-border-strong)] sm:hidden"
+        />
         {children}
         <BaseDialog.Close
           render={<Button variant="ghost" size="icon" className="absolute right-2 top-2" />}

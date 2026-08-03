@@ -2,6 +2,8 @@
 
 Kuvend's public synthetic demo runs in the Railway project `Kuvend`, production environment, with six application services and four isolated Postgres services. The live configuration is intentionally split between versioned application deployment files and Railway environment settings.
 
+The project also has a `staging` environment. Its six application services follow the GitHub `staging` branch and use Railway-generated domains. Production follows `main`. A release is pushed to `staging`, verified there, and then promoted as the same revision through a pull request to `main`.
+
 ## Versioned contract
 
 - `apps/*/railway.json` owns Dockerfile selection, watch paths, deploy healthchecks, timeout, draining, and restart behavior.
@@ -63,6 +65,14 @@ After every infrastructure change:
 6. Confirm only one EU West replica is active.
 7. Inspect CPU and memory metrics for OOMs or sustained saturation.
 8. Check that no full variable values appeared in logs or task output.
+
+## Promotion workflow
+
+1. Run the repository validation and privacy checks locally.
+2. Push the candidate revision to the GitHub `staging` branch.
+3. Wait for every affected staging deployment to succeed and verify staging health, CORS, and the public proposal flow.
+4. Merge the candidate pull request to `main` without changing the tested revision.
+5. Wait for every affected production deployment and repeat the production checks above.
 
 ## Cost controls
 

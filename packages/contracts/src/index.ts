@@ -68,6 +68,7 @@ export const createArgumentSchema = z
     position: argumentPositionSchema,
     body: z.string().trim().min(8).max(700),
     evidence: z.array(evidenceItemSchema).max(3).default([]),
+    publicAuthorName: z.string().trim().min(2).max(80).optional(),
     credential: z.string().min(20),
     contributionNullifier: z.string().regex(/^[a-f0-9]{64}$/),
   })
@@ -223,6 +224,7 @@ export interface ArgumentRecord {
   body: string;
   evidence: EvidenceItem[];
   pseudonym: string;
+  publicAuthorName?: string;
   createdAt: string;
 }
 

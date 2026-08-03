@@ -78,6 +78,18 @@ export function checkTypescript(source: string, file = "fixture.tsx"): Violation
         );
     }
   }
+  if (!file.includes("packages/ui/")) {
+    for (const group of node.getDescendantsOfKind(SyntaxKind.JsxElement)) {
+      if (group.getOpeningElement().getTagNameNode().getText() !== "fieldset") continue;
+      const markup = group.getText();
+      if (!markup.includes("<FieldLegend") || !markup.includes("<FieldDescription"))
+        report(
+          group.getStartLineNumber(),
+          "field-group-contract",
+          "Fieldsets require one shared FieldLegend and one FieldDescription from @kuvend/ui.",
+        );
+    }
+  }
   if (source.includes("<DialogContent") && !source.includes("<DialogTitle"))
     report(1, "dialog-title", "DialogContent requires DialogTitle.");
   if (rawColor.test(source) && !file.includes("opengraph-image") && !file.includes("brand"))

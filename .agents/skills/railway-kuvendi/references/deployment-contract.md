@@ -20,6 +20,15 @@
 | `admin`         | `4815cd9b-0723-40b9-abd5-ee793345a805` | `admin.kuvend.org`         | 4003 | yes                 | 0.5 vCPU / 0.25 GB |
 | `notifications` | `fa306d00-8478-4c7e-a575-d59ee9fcf424` | `notifications.kuvend.org` | 4004 | yes                 | 0.5 vCPU / 0.25 GB |
 
+## Staging promotion gate
+
+- Environment: `staging`
+- Environment ID: `91b9664d-3a75-482c-ac22-196a13bf7d53`
+- GitHub source: `revidostudio/kuvend`, branch `staging`
+- Staging uses Railway-generated domains only; it has no production custom domains.
+- Application domains are `web-staging-7bb7.up.railway.app`, `civic-api-staging.up.railway.app`, `issuer-staging-f1ff.up.railway.app`, `assistant-staging-d844.up.railway.app`, `admin-staging-ac1b.up.railway.app`, and `notifications-staging-69b8.up.railway.app`.
+- Promote the exact tested revision by merging its pull request to `main`; never point production at the `staging` branch.
+
 ## Database mapping
 
 | Trust domain   | Railway service | ID                                     | Limit              |

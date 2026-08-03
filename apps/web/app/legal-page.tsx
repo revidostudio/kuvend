@@ -19,6 +19,10 @@ export function LegalPage({
       <h1>{title}</h1>
       <p className="legal-lead">{lead}</p>
       <div className="legal-content">{children}</div>
+      <div className="legal-actions">
+        <a href="/#propozimet">Shiko propozimet</a>
+        <a href="/">Kthehu në krye</a>
+      </div>
       <p className="legal-updated">Versioni beta · Përditësuar më 2 gusht 2026</p>
     </main>
   );
