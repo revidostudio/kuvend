@@ -38,6 +38,22 @@ export const fallbackProposals: ProposalRecord[] = [
         pseudonym: "Guri i Bardhë",
         createdAt: "2026-07-26T10:00:00.000Z",
       },
+      {
+        id: "a3",
+        position: "for",
+        body: "Hija dhe ulëset do ta bënin pritjen më të sigurt për të moshuarit dhe fëmijët.",
+        evidence: [],
+        pseudonym: "Bredhi i Gjelbër",
+        createdAt: "2026-07-27T10:00:00.000Z",
+      },
+      {
+        id: "a4",
+        position: "against",
+        body: "Duhet publikuar një kosto e përafërt për çdo stacion para se të merret vendimi.",
+        evidence: [],
+        pseudonym: "Mali i Hapur",
+        createdAt: "2026-07-28T10:00:00.000Z",
+      },
     ],
     statusHistory: [
       {
@@ -84,20 +100,31 @@ export const fallbackProposals: ProposalRecord[] = [
     category: "governance",
     evidence: [],
     pseudonym: "Fjala e Lirë",
-    status: "voting_open",
+    status: "voting_closed",
     revisionNumber: 1,
     votingRound: {
       id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-      opensAt: "2026-07-28T09:00:00.000Z",
-      closesAt: "2026-08-11T09:00:00.000Z",
+      opensAt: "2026-07-14T09:00:00.000Z",
+      closesAt: "2026-07-28T09:00:00.000Z",
       turnout: 312,
+    },
+    closedResult: {
+      turnout: 312,
+      support: 240,
+      oppose: 72,
+      closedAt: "2026-07-28T09:00:00.000Z",
     },
     arguments: [],
     statusHistory: [
       {
         status: "voting_open",
-        at: "2026-07-28T09:00:00.000Z",
+        at: "2026-07-14T09:00:00.000Z",
         note: "Kaloi kontrollin e moderimit.",
+      },
+      {
+        status: "voting_closed",
+        at: "2026-07-28T09:00:00.000Z",
+        note: "Votimi u mbyll pas 14 ditësh.",
       },
     ],
   },

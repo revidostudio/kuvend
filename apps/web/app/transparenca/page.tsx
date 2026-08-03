@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { LegalPage } from "../legal-page";
 
-export const metadata: Metadata = { title: "Transparenca — Kuvend" };
+export const metadata: Metadata = {
+  title: "Transparenca — Kuvend",
+  alternates: { canonical: "/transparenca" },
+};
 
 export default function TransparencyPage() {
   return (
@@ -13,7 +16,8 @@ export default function TransparencyPage() {
       <p>
         Nuk ka reklama, shitje të dhënash, pagesa për ndikim ose renditje të sponsorizuar.
         Mbështetja financiare mbulon vetëm kostot e përbashkëta dhe duhet të publikohet veçmas nga
-        kontributi i punës.
+        kontributi i punës. Shiko <a href="/rreth-kuvendit">kush mban përgjegjësi</a> dhe{" "}
+        <a href="/financimi">regjistrin e financimit</a>.
       </p>
       <h2>Teknologjia</h2>
       <p>
@@ -27,6 +31,12 @@ export default function TransparencyPage() {
         Pjesëmarrja sensitive nuk nis pa operator të pavarur të lëshuesit, protokoll të zgjedhur nga
         kriptografë të pavarur, vlerësim ligjor dhe të ndikimit, tre mirëmbajtës, miratim prodhimi
         nga dy persona dhe auditime të publikuara pa gjetje kritike ose të larta.
+      </p>
+      <h2>Statusi i deklaratave</h2>
+      <p>
+        Beta aktuale demonstron ndarjen e skemave dhe rrjedhën e produktit. Ajo nuk pretendon
+        operator të pavarur të lëshuesit, anonimitet të audituar ose përfaqësim kombëtar. Shiko{" "}
+        <a href="/besimi">Qendrën e besimit</a> për një përmbledhje të këtyre kufijve.
       </p>
       <p>
         Raportim sigurie: <a href="mailto:security@kuvend.org">security@kuvend.org</a>. Moderim:{" "}
