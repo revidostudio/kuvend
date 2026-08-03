@@ -11,11 +11,14 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  ChoiceButton,
   EmptyState,
   Field,
+  FileUploader,
   Input,
   Label,
   ProposalCard,
+  SearchField,
   Skeleton,
   Spinner,
   Tabs,
@@ -51,10 +54,20 @@ export const Primitives: Story = {
         <Button disabled>Duke dërguar…</Button>
         <Badge>Votimi i hapur</Badge>
       </div>
+      <div className="grid grid-cols-3 gap-2">
+        <ChoiceButton selected>Pa emër</ChoiceButton>
+        <ChoiceButton selected tone="success">
+          Pro
+        </ChoiceButton>
+        <ChoiceButton selected tone="danger">
+          Kundër
+        </ChoiceButton>
+      </div>
       <Field>
         <Label htmlFor="story-title">Titulli</Label>
         <Input id="story-title" placeholder="Një titull i qartë" />
       </Field>
+      <SearchField aria-label="Kërko propozime" placeholder="Kërko propozime" />
       <Field>
         <Label htmlFor="story-body">Problemi</Label>
         <Textarea
@@ -88,6 +101,14 @@ export const ProductPatterns: Story = {
         title="Nuk u gjet asnjë propozim"
         description="Provo një fjalë tjetër ose hiq filtrat."
         action={<Button variant="outline">Pastro filtrat</Button>}
+      />
+      <FileUploader
+        id="story-upload"
+        accept="image/*"
+        file={null}
+        kind="image"
+        onFileSelect={() => undefined}
+        onRemove={() => undefined}
       />
     </div>
   ),

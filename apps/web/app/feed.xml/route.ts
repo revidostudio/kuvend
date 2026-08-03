@@ -1,4 +1,5 @@
 import { publicProposalPreviews } from "../seo-data";
+import { proposalPath } from "../proposal-url";
 
 const civicUrl =
   process.env.CIVIC_API_URL ?? process.env.NEXT_PUBLIC_CIVIC_API_URL ?? "http://localhost:4000";
@@ -26,7 +27,7 @@ export async function GET() {
     .filter((proposal) => !proposal.status || proposal.status === "voting_open")
     .map(
       (proposal) =>
-        `<item><title>${escapeXml(proposal.title)}</title><link>https://kuvend.org/propozime/${proposal.id}</link><guid>https://kuvend.org/propozime/${proposal.id}</guid><description>${escapeXml(proposal.summary)}</description><pubDate>${new Date(proposal.votingRound?.opensAt ?? proposal.opensAt ?? Date.now()).toUTCString()}</pubDate></item>`,
+        `<item><title>${escapeXml(proposal.title)}</title><link>https://kuvend.org${proposalPath(proposal)}</link><guid>https://kuvend.org${proposalPath(proposal)}</guid><description>${escapeXml(proposal.summary)}</description><pubDate>${new Date(proposal.votingRound?.opensAt ?? proposal.opensAt ?? Date.now()).toUTCString()}</pubDate></item>`,
     )
     .join("");
   const xml = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>Kuvend — Propozimet në votim</title><link>https://kuvend.org</link><description>Propozime të reja në votim këshillues për Shqipërinë.</description><language>sq-AL</language>${items}</channel></rss>`;

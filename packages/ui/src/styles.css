@@ -1,19 +1,76 @@
 :root {
   color-scheme: light;
-  --kuvend-canvas: oklch(1 0 0);
-  --kuvend-ink: oklch(0.2 0.035 264);
-  --kuvend-ink-soft: oklch(0.43 0.025 264);
-  --kuvend-surface: oklch(0.985 0.004 264);
+  --kuvend-canvas: oklch(0.975 0.004 264);
+  --kuvend-ink: oklch(0.16 0.025 264);
+  --kuvend-ink-soft: oklch(0.4 0.02 264);
+  --kuvend-surface: oklch(0.945 0.008 264);
   --kuvend-surface-raised: oklch(1 0 0);
-  --kuvend-border: oklch(0.91 0.008 264);
-  --kuvend-border-strong: oklch(0.78 0.012 264);
-  --kuvend-red: oklch(0.52 0.21 27);
-  --kuvend-red-hover: oklch(0.46 0.2 27);
-  --kuvend-red-soft: oklch(0.96 0.025 27);
-  --kuvend-success: oklch(0.5 0.14 145);
+  --kuvend-border: oklch(0.875 0.01 264);
+  --kuvend-border-strong: oklch(0.68 0.015 264);
+  --kuvend-red: oklch(0.48 0.225 27);
+  --kuvend-red-hover: oklch(0.41 0.21 27);
+  --kuvend-red-soft: oklch(0.925 0.045 27);
+  --kuvend-success: oklch(0.46 0.135 145);
+  --kuvend-success-soft: oklch(0.93 0.04 145);
   --kuvend-warning: oklch(0.63 0.13 75);
-  --kuvend-danger: oklch(0.52 0.2 27);
-  --kuvend-focus: oklch(0.58 0.18 255);
+  --kuvend-danger: oklch(0.48 0.22 27);
+  --kuvend-danger-soft: var(--kuvend-red-soft);
+  --kuvend-accent: oklch(0.46 0.155 255);
+  --kuvend-accent-soft: oklch(0.93 0.035 255);
+  --kuvend-focus: oklch(0.54 0.2 255);
+  --kuvend-primary-gradient: linear-gradient(
+    135deg,
+    oklch(0.4 0.2 27) 0%,
+    var(--kuvend-red) 52%,
+    oklch(0.56 0.225 20) 100%
+  );
+  --kuvend-primary-gradient-hover: linear-gradient(
+    135deg,
+    oklch(0.36 0.19 27) 0%,
+    var(--kuvend-red-hover) 50%,
+    oklch(0.51 0.22 20) 100%
+  );
+  --kuvend-active-gradient: linear-gradient(
+    145deg,
+    oklch(0.105 0.022 264) 0%,
+    var(--kuvend-ink) 55%,
+    oklch(0.25 0.04 264) 100%
+  );
+  --kuvend-vote-gradient: linear-gradient(
+    160deg,
+    var(--kuvend-surface-raised) 0%,
+    oklch(0.95 0.02 255) 100%
+  );
+  --kuvend-support-gradient: linear-gradient(
+    135deg,
+    oklch(0.38 0.13 150) 0%,
+    var(--kuvend-success) 58%,
+    oklch(0.56 0.13 142) 100%
+  );
+  --kuvend-support-gradient-hover: linear-gradient(
+    135deg,
+    oklch(0.34 0.125 150) 0%,
+    oklch(0.42 0.145 145) 58%,
+    oklch(0.51 0.14 142) 100%
+  );
+  --kuvend-oppose-gradient: linear-gradient(
+    135deg,
+    oklch(0.39 0.19 27) 0%,
+    var(--kuvend-red) 58%,
+    oklch(0.57 0.215 20) 100%
+  );
+  --kuvend-oppose-gradient-hover: linear-gradient(
+    135deg,
+    oklch(0.35 0.18 27) 0%,
+    var(--kuvend-red-hover) 58%,
+    oklch(0.51 0.21 20) 100%
+  );
+  --kuvend-control-shadow:
+    0 1px 2px oklch(0.16 0.025 264 / 0.16), 0 8px 20px oklch(0.48 0.225 27 / 0.18);
+  --kuvend-control-shadow-hover:
+    0 2px 4px oklch(0.16 0.025 264 / 0.18), 0 12px 26px oklch(0.48 0.225 27 / 0.24);
+  --kuvend-control-shadow-soft:
+    0 1px 2px oklch(0.16 0.025 264 / 0.12), 0 4px 12px oklch(0.16 0.025 264 / 0.07);
   --kuvend-radius-sm: 0.375rem;
   --kuvend-radius-md: 0.625rem;
   --kuvend-radius-lg: 0.75rem;
@@ -26,14 +83,130 @@
 }
 
 .dark {
-  --kuvend-canvas: oklch(0.16 0.02 264);
-  --kuvend-ink: oklch(0.96 0.006 264);
-  --kuvend-ink-soft: oklch(0.72 0.012 264);
-  --kuvend-surface: oklch(0.2 0.02 264);
-  --kuvend-surface-raised: oklch(0.23 0.02 264);
-  --kuvend-border: oklch(0.34 0.018 264);
-  --kuvend-border-strong: oklch(0.5 0.02 264);
-  --kuvend-red-soft: oklch(0.27 0.06 27);
+  --kuvend-canvas: oklch(0.14 0.018 264);
+  --kuvend-ink: oklch(0.965 0.006 264);
+  --kuvend-ink-soft: oklch(0.74 0.012 264);
+  --kuvend-surface: oklch(0.19 0.02 264);
+  --kuvend-surface-raised: oklch(0.225 0.02 264);
+  --kuvend-border: oklch(0.31 0.018 264);
+  --kuvend-border-strong: oklch(0.52 0.02 264);
+  --kuvend-red: oklch(0.65 0.2 27);
+  --kuvend-red-hover: oklch(0.7 0.19 27);
+  --kuvend-red-soft: oklch(0.28 0.065 27);
+  --kuvend-success: oklch(0.68 0.13 145);
+  --kuvend-success-soft: oklch(0.27 0.055 145);
+  --kuvend-warning: oklch(0.75 0.12 75);
+  --kuvend-danger: oklch(0.66 0.19 27);
+  --kuvend-danger-soft: var(--kuvend-red-soft);
+  --kuvend-accent: oklch(0.72 0.13 255);
+  --kuvend-accent-soft: oklch(0.28 0.05 255);
+  --kuvend-focus: oklch(0.7 0.16 255);
+  --kuvend-primary-gradient: linear-gradient(
+    135deg,
+    oklch(0.5 0.19 27) 0%,
+    var(--kuvend-red) 52%,
+    oklch(0.72 0.18 20) 100%
+  );
+  --kuvend-primary-gradient-hover: linear-gradient(
+    135deg,
+    oklch(0.55 0.18 27) 0%,
+    var(--kuvend-red-hover) 50%,
+    oklch(0.76 0.17 20) 100%
+  );
+  --kuvend-active-gradient: linear-gradient(
+    145deg,
+    oklch(0.18 0.02 264) 0%,
+    var(--kuvend-surface-raised) 55%,
+    oklch(0.3 0.035 264) 100%
+  );
+  --kuvend-vote-gradient: linear-gradient(
+    160deg,
+    var(--kuvend-surface-raised) 0%,
+    oklch(0.27 0.04 255) 100%
+  );
+  --kuvend-support-gradient: linear-gradient(
+    135deg,
+    oklch(0.45 0.13 150) 0%,
+    var(--kuvend-success) 58%,
+    oklch(0.72 0.12 142) 100%
+  );
+  --kuvend-support-gradient-hover: linear-gradient(
+    135deg,
+    oklch(0.5 0.13 150) 0%,
+    oklch(0.72 0.13 145) 58%,
+    oklch(0.76 0.11 142) 100%
+  );
+  --kuvend-oppose-gradient: linear-gradient(
+    135deg,
+    oklch(0.5 0.18 27) 0%,
+    var(--kuvend-red) 58%,
+    oklch(0.73 0.18 20) 100%
+  );
+  --kuvend-oppose-gradient-hover: linear-gradient(
+    135deg,
+    oklch(0.55 0.17 27) 0%,
+    var(--kuvend-red-hover) 58%,
+    oklch(0.77 0.17 20) 100%
+  );
+  --kuvend-control-shadow:
+    0 1px 2px oklch(0.06 0.01 264 / 0.3), 0 8px 20px oklch(0.5 0.19 27 / 0.2);
+  --kuvend-control-shadow-hover:
+    0 2px 4px oklch(0.06 0.01 264 / 0.34), 0 12px 26px oklch(0.5 0.19 27 / 0.26);
+  --kuvend-control-shadow-soft:
+    0 1px 2px oklch(0.06 0.01 264 / 0.3), 0 4px 12px oklch(0.06 0.01 264 / 0.2);
+}
+
+[data-slot="button"][data-variant="primary"],
+[data-slot="button"][data-variant="default"] {
+  background: var(--kuvend-primary-gradient);
+  box-shadow: var(--kuvend-control-shadow);
+}
+
+[data-slot="button"][data-variant="primary"]:hover,
+[data-slot="button"][data-variant="default"]:hover {
+  background: var(--kuvend-primary-gradient-hover);
+  box-shadow: var(--kuvend-control-shadow-hover);
+  filter: brightness(1.03);
+  transform: translateY(-1px);
+}
+
+[data-slot="button"][data-variant="primary"]:active,
+[data-slot="button"][data-variant="default"]:active {
+  box-shadow: var(--kuvend-control-shadow-soft);
+  filter: brightness(0.96);
+  transform: translateY(0);
+}
+
+[data-slot="button"][data-variant="outline"] {
+  box-shadow: var(--kuvend-control-shadow-soft);
+}
+
+[data-slot="button"][data-variant="outline"]:hover {
+  transform: translateY(-1px);
+}
+
+[data-slot="button"][data-selected="false"] {
+  border-color: transparent;
+  background: var(--kuvend-surface-raised);
+  color: var(--kuvend-ink);
+}
+
+[data-slot="button"][data-selected="true"][data-tone="neutral"] {
+  border-color: var(--kuvend-accent);
+  background: var(--kuvend-accent-soft);
+  color: var(--kuvend-accent);
+}
+
+[data-slot="button"][data-selected="true"][data-tone="success"] {
+  border-color: var(--kuvend-success);
+  background: var(--kuvend-success-soft);
+  color: var(--kuvend-success);
+}
+
+[data-slot="button"][data-selected="true"][data-tone="danger"] {
+  border-color: var(--kuvend-danger);
+  background: var(--kuvend-danger-soft);
+  color: var(--kuvend-danger);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -44,5 +217,9 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+  [data-slot="button"]:hover,
+  [data-slot="button"]:active {
+    transform: none !important;
   }
 }

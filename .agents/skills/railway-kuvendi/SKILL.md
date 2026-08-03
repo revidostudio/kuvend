@@ -25,6 +25,7 @@ Operate the linked `Kuvend` Railway project without crossing its privacy boundar
 - Deploy production through GitHub `main`; do not use `railway up`.
 - Keep browser calls on custom HTTPS domains and server/database calls on `*.railway.internal` reference variables.
 - Keep the four Postgres trust domains separate. Do not consolidate or expose their TCP endpoints for convenience.
+- Keep `admin.kuvend.org` behind the `Kuvend Admin` Cloudflare Access application and the `Rodrig only` policy. Its expected public health result is the Access login redirect, not an unauthenticated HTTP 200.
 - Do not delete, unlink, rename, restart, redeploy, scale, rotate secrets, or change domains unless the task explicitly authorizes that operation.
 - Do not enable real OTP delivery or accept sensitive civic participation; this repository remains a synthetic demo.
 - Preserve one replica in EU West until measured traffic demonstrates a need to scale.

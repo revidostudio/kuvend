@@ -9,6 +9,7 @@
 - GitHub source: `revidostudio/kuvend`, branch `main`, check suites enabled
 - Region: EU West (`europe-west4-drams3a`), one replica per service
 - Revido workspace usage control: $175 soft alert, no hard shutdown limit
+- Admin access: Cloudflare Access application `Kuvend Admin`, application ID `8bded81b-6faf-4ee5-ab1b-f587df90a794`, policy `Rodrig only`
 
 | Service         | ID                                     | Public domain              | Port | Serverless          | Limit              |
 | --------------- | -------------------------------------- | -------------------------- | ---: | ------------------- | ------------------ |
@@ -18,6 +19,15 @@
 | `assistant`     | `21235006-1348-4d2c-a118-451057ece264` | `assistant.kuvend.org`     | 4002 | yes                 | 0.5 vCPU / 0.25 GB |
 | `admin`         | `4815cd9b-0723-40b9-abd5-ee793345a805` | `admin.kuvend.org`         | 4003 | yes                 | 0.5 vCPU / 0.25 GB |
 | `notifications` | `fa306d00-8478-4c7e-a575-d59ee9fcf424` | `notifications.kuvend.org` | 4004 | yes                 | 0.5 vCPU / 0.25 GB |
+
+## Staging promotion gate
+
+- Environment: `staging`
+- Environment ID: `91b9664d-3a75-482c-ac22-196a13bf7d53`
+- GitHub source: `revidostudio/kuvend`, branch `staging`
+- Staging uses Railway-generated domains only; it has no production custom domains.
+- Application domains are `web-staging-7bb7.up.railway.app`, `civic-api-staging.up.railway.app`, `issuer-staging-f1ff.up.railway.app`, `assistant-staging-d844.up.railway.app`, `admin-staging-ac1b.up.railway.app`, and `notifications-staging-69b8.up.railway.app`.
+- Promote the exact tested revision by merging its pull request to `main`; never point production at the `staging` branch.
 
 ## Database mapping
 
@@ -42,6 +52,8 @@ Each application keeps a blank Railway root directory and uses its absolute conf
 - `/apps/admin/railway.json`
 
 The files own Dockerfile paths, watch patterns, deploy healthchecks, 60-second healthcheck timeouts, 10-second drain windows, and on-failure restart policy. Serverless and replica resource limits remain live environment settings and are enforced by `scripts/configure.mjs`.
+
+The public admin healthcheck is intentionally intercepted by Cloudflare Access. Treat an HTTP 302 redirect from `admin.kuvend.org` to `little-surf-992e.cloudflareaccess.com` as healthy; do not weaken or bypass Access to obtain a public HTTP 200.
 
 ## Privacy and promotion gates
 
