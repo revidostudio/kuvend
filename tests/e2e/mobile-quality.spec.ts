@@ -181,10 +181,13 @@ test("trust and transparency pages are indexable, connected and mobile-safe", as
     ["/besimi", "Qendra e besimit"],
     ["/rreth-kuvendit", "Kush qëndron pas Kuvend"],
     ["/si-funksionon", "Si funksionon"],
-    ["/privatesia", "Privatësia"],
+    ["/privatesia", "Politika e privatësisë"],
     ["/siguria", "Siguria"],
     ["/financimi", "Financimi"],
+    ["/kushtet", "Kushtet e përdorimit"],
     ["/transparenca", "Transparenca"],
+    ["/en/privacy", "Privacy policy"],
+    ["/en/terms", "Terms of use"],
   ] as const;
 
   for (const [path, heading] of routes) {
@@ -238,6 +241,42 @@ test("trust and transparency pages are indexable, connected and mobile-safe", as
       false,
     );
   }
+});
+
+test("legal notices identify the controller, status, languages and complaint path", async ({
+  page,
+}) => {
+  await page.goto("/privatesia");
+  await expect(page.getByText("Revido LLC", { exact: false }).first()).toBeVisible();
+  await expect(page.getByText("Draft për shqyrtim ligjor.", { exact: false })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Read this policy in English" })).toHaveAttribute(
+    "href",
+    "/en/privacy",
+  );
+  await expect(page.getByRole("link", { name: "faqes së ankesave" })).toHaveAttribute(
+    "href",
+    "https://idp.al/en/complain/",
+  );
+  await expect(page.locator('link[hreflang="en"]')).toHaveAttribute("href", /\/en\/privacy$/);
+
+  await page.goto("/en/terms");
+  await expect(page.locator("main")).toHaveAttribute("lang", "en");
+  await expect(page.getByText("Revido LLC", { exact: false }).first()).toBeVisible();
+  await expect(page.getByText("Draft for legal review.", { exact: false })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Lexoji këto kushte në shqip" })).toHaveAttribute(
+    "href",
+    "/kushtet",
+  );
+
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
+    .analyze();
+  expect(
+    results.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? "")),
+  ).toEqual([]);
+  expect(await page.locator("body").evaluate((body) => body.scrollWidth > body.clientWidth)).toBe(
+    false,
+  );
 });
 
 test("desktop navigation is centered, understated and marks the active page", async ({

@@ -10,12 +10,27 @@ const rawColor = /#[\da-f]{3,8}\b|rgba?\s*\(/i;
 const visualOverride = /(?:^|\s)(?:bg|text|border|rounded|shadow|ring)-(?!\[var\(--kuvend-)/;
 const primitives = new Set([
   "Button",
+  "ChoiceButton",
   "Input",
+  "SearchField",
+  "ComboboxInput",
+  "ComboboxTrigger",
+  "ComboboxItem",
   "Textarea",
   "NativeSelect",
   "Checkbox",
+  "CheckboxField",
+  "RadioGroupItem",
+  "TabsTrigger",
   "DialogContent",
   "SelectTrigger",
+]);
+const fieldControls = new Set([
+  "Input",
+  "SearchField",
+  "ComboboxInput",
+  "Textarea",
+  "NativeSelect",
 ]);
 
 export function checkTypescript(source: string, file = "fixture.tsx"): Violation[] {
@@ -57,6 +72,24 @@ export function checkTypescript(source: string, file = "fixture.tsx"): Violation
           element.getStartLineNumber(),
           "primitive-override",
           `Do not visually restyle ${tag} in a feature.`,
+        );
+    }
+    if (tag === "Checkbox" && !file.includes("packages/ui/"))
+      report(
+        element.getStartLineNumber(),
+        "checkbox-field-contract",
+        "Compose checkbox choices with CheckboxField from @kuvend/ui.",
+      );
+    if (fieldControls.has(tag) && !file.includes("packages/ui/")) {
+      const attributes = element
+        .getAttributes()
+        .map((attribute) => attribute.getText())
+        .join(" ");
+      if (!/\b(id|aria-label|aria-labelledby)=/.test(attributes))
+        report(
+          element.getStartLineNumber(),
+          "field-name-contract",
+          `${tag} needs an id linked to a Label or an explicit accessible name.`,
         );
     }
     if (tag === "Button" && !file.includes("packages/ui/")) {

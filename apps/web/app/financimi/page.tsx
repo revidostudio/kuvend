@@ -35,8 +35,9 @@ export default function FundingPage() {
       </p>
       <h2>Shpenzimet</h2>
       <p>
-        Regjistri do të ndajë kostot e hosting-ut, SMS-ve, auditimeve, punës ligjore dhe shërbimeve
-        të tjera. Vlerat nuk do të paraqiten si “zero” kur janë mbuluar si kontribut në natyrë.
+        Regjistri do të ndajë kostot e hosting-ut, verifikimeve WhatsApp, auditimeve, punës ligjore
+        dhe shërbimeve të tjera. Vlerat nuk do të paraqiten si “zero” kur janë mbuluar si kontribut
+        në natyrë.
       </p>
     </LegalPage>
   );

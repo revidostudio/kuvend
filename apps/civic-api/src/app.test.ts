@@ -224,7 +224,8 @@ describe("civic API", () => {
       url: `/v1/proposals/${proposal.id}/commitments`,
     });
     expect(before.statusCode).toBe(403);
-    await store.closeExpiredRounds(new Date("2026-08-20T00:00:00.000Z"));
+    const closesAt = new Date(proposal.votingRound!.closesAt);
+    await store.closeExpiredRounds(new Date(closesAt.getTime() + 1));
     const after = await app.inject({
       method: "GET",
       url: `/v1/proposals/${proposal.id}/commitments`,

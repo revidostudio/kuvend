@@ -30,6 +30,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       "kushtet",
       "moderimi",
       "transparenca",
+      "en/privacy",
+      "en/terms",
     ].map((path) => ({
       url: `https://kuvend.org/${path}`,
       changeFrequency: "monthly" as const,

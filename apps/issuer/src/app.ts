@@ -5,6 +5,7 @@ import { issueSyntheticCredential } from "@kuvend/credential";
 import Fastify from "fastify";
 import { OtpProviderError, type OtpProvider } from "./otp-provider.js";
 import { PreludeOtpProvider } from "./prelude-provider.js";
+import { SentDmOtpProvider } from "./sentdm-provider.js";
 import { SyntheticOtpProvider } from "./synthetic-provider.js";
 import { MemoryChallengeStore, type ChallengeStore } from "./challenge-store.js";
 
@@ -16,6 +17,17 @@ function configuredProvider(): OtpProvider {
       apiKey: process.env.PRELUDE_API_KEY ?? "",
       ...(process.env.PRELUDE_BASE_URL ? { baseUrl: process.env.PRELUDE_BASE_URL } : {}),
       ...(process.env.PRELUDE_SENDER_ID ? { senderId: process.env.PRELUDE_SENDER_ID } : {}),
+    });
+  }
+  if (provider === "sentdm") {
+    return new SentDmOtpProvider({
+      apiKey: process.env.SENTDM_API_KEY ?? "",
+      templateId: process.env.SENTDM_TEMPLATE_ID ?? "",
+      verificationKey: process.env.SENTDM_OTP_KEY ?? "",
+      ...(process.env.SENTDM_BASE_URL ? { baseUrl: process.env.SENTDM_BASE_URL } : {}),
+      ...(process.env.SENTDM_CODE_PARAMETER
+        ? { codeParameter: process.env.SENTDM_CODE_PARAMETER }
+        : {}),
     });
   }
   throw new Error(`Unsupported OTP_PROVIDER: ${provider}`);
@@ -66,8 +78,10 @@ export function buildApp(options: { provider?: OtpProvider; store?: ChallengeSto
       reply.header("retry-after", String(rateLimit.retryAfterSeconds));
       return reply.code(429).send({ error: "too_many_verification_requests" });
     }
+    let verificationState: string | undefined;
     try {
-      await provider.start(parsed.data.phone);
+      const startResult = await provider.start(parsed.data.phone);
+      verificationState = startResult?.verificationState;
     } catch (error) {
       if (error instanceof OtpProviderError) {
         return reply.code(error.statusCode).send({ error: error.publicCode });
@@ -78,6 +92,7 @@ export function buildApp(options: { provider?: OtpProvider; store?: ChallengeSto
     await challenges.put({
       id: challengeId,
       phoneDigest,
+      ...(verificationState ? { verificationState } : {}),
       expiresAt: Date.now() + 5 * 60_000,
       attempts: 0,
     });
@@ -105,7 +120,11 @@ export function buildApp(options: { provider?: OtpProvider; store?: ChallengeSto
     if (attempts > 5) return reply.code(429).send({ error: "too_many_attempts" });
     let result;
     try {
-      result = await provider.check(parsed.data.phone, parsed.data.code);
+      result = await provider.check(
+        parsed.data.phone,
+        parsed.data.code,
+        challenge.verificationState,
+      );
     } catch (error) {
       if (error instanceof OtpProviderError) {
         return reply.code(error.statusCode).send({ error: error.publicCode });
@@ -124,7 +143,9 @@ export function buildApp(options: { provider?: OtpProvider; store?: ChallengeSto
       syntheticCredentialProtocol: true,
       otpProvider: provider.id,
       privacyNotice:
-        "Shërbimet e propozimeve dhe votimit të Kuvend nuk marrin numrin tuaj. Në këtë beta, shërbimi i izoluar i verifikimit i Kuvend e përpunon përkohësisht.",
+        provider.id === "sentdm"
+          ? "Shërbimet e propozimeve dhe votimit të Kuvend nuk marrin numrin tuaj. Sent e dërgon kodin nga dërguesi i vet; shërbimi i izoluar, Sent dhe WhatsApp (Meta) e përpunojnë numrin vetëm për këtë dërgesë."
+          : "Shërbimet e propozimeve dhe votimit të Kuvend nuk marrin numrin tuaj. Në këtë beta, shërbimi i izoluar i verifikimit i Kuvend e përpunon përkohësisht.",
     };
   });
 
