@@ -13,8 +13,18 @@ import {
   AlertTitle,
   Badge,
   Button,
-  Checkbox,
+  CheckboxField,
   ChoiceButton,
+  Combobox,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxInputGroup,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxPopup,
+  ComboboxPortal,
+  ComboboxPositioner,
+  ComboboxTrigger,
   Dialog as ShadDialog,
   DialogContent,
   DialogDescription,
@@ -64,6 +74,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import type { CountryCode } from "libphonenumber-js";
 import { useEffect, useMemo, useState } from "react";
 import { EvidenceEditor, EvidenceList } from "../features/kuvend/evidence";
 import {
@@ -84,6 +95,7 @@ import {
 } from "../features/kuvend/display-preference";
 import { fallbackProposals } from "../features/kuvend/fallback-data";
 import { extractProposalId, proposalPath } from "./proposal-url";
+import { countryLabel, internationalPhone, phoneCountries } from "../features/kuvend/phone-number";
 
 const civicUrl = process.env.NEXT_PUBLIC_CIVIC_API_URL ?? "";
 const issuerUrl = process.env.NEXT_PUBLIC_ISSUER_URL ?? "http://localhost:4001";
@@ -99,6 +111,10 @@ const categoryLabels: Record<string, string> = {
   economy: "Ekonomi",
   other: "Tjetër",
 };
+const countryOptions = phoneCountries.map((option) => ({
+  value: option.country,
+  label: `${option.label} (+${option.callingCode})`,
+}));
 
 export const fallback = fallbackProposals;
 
@@ -175,7 +191,12 @@ export function KuvendApp({
 
   useEffect(() => {
     setDisplayNow(Date.now());
-    setCredential(localStorage.getItem("kuvend.syntheticCredential.v1") ?? "");
+    const storedCredential =
+      localStorage.getItem("kuvend.credential.v1") ??
+      localStorage.getItem("kuvend.syntheticCredential.v1") ??
+      "";
+    if (storedCredential) localStorage.setItem("kuvend.credential.v1", storedCredential);
+    setCredential(storedCredential);
     if (!civicUrl) return;
     fetch(`${civicUrl}/v1/proposals`)
       .then((response) => (response.ok ? response.json() : Promise.reject()))
@@ -1030,7 +1051,7 @@ export function KuvendApp({
         <OtpDialog
           onClose={() => setDialog(null)}
           onVerified={(value) => {
-            localStorage.setItem("kuvend.syntheticCredential.v1", value);
+            localStorage.setItem("kuvend.credential.v1", value);
             setCredential(value);
             setDialog(
               afterOtp === "proposal" ? "proposal" : afterOtp === "argument" ? "argument" : null,
@@ -1145,63 +1166,117 @@ function OtpDialog({
   onClose: () => void;
   onVerified: (credential: string) => void;
 }) {
-  const [phone, setPhone] = useState("+355");
+  const [country, setCountry] = useState<CountryCode>("AL");
+  const [nationalNumber, setNationalNumber] = useState("");
+  const [challengePhone, setChallengePhone] = useState("");
   const [challenge, setChallenge] = useState("");
   const [code, setCode] = useState("");
-  const [otpProvider, setOtpProvider] = useState<"synthetic" | "prelude">("synthetic");
+  const [otpProvider, setOtpProvider] = useState<"synthetic" | "prelude" | "sentdm">("synthetic");
   const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetch("/api/country", { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const payload = (await response.json()) as { country?: string };
+        if (phoneCountries.some((option) => option.country === payload.country))
+          setCountry(payload.country as CountryCode);
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, []);
+
   async function start() {
-    const response = await fetch(`${issuerUrl}/v1/otp/start`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ phone }),
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      return setError(
-        data.error === "verification_blocked" || data.error === "too_many_attempts"
-          ? "Nuk mund të dërgohet një kod tani. Provo përsëri më vonë."
-          : "Kontrollo numrin në format ndërkombëtar, p.sh. +355...",
-      );
+    const phone = internationalPhone(country, nationalNumber);
+    if (!phone) {
+      setError("Kontrollo numrin. Zgjidh shtetin dhe shkruaj numrin pa kodin ndërkombëtar.");
+      return;
     }
-    setChallenge(data.challengeId);
-    setOtpProvider(data.otpProvider === "prelude" ? "prelude" : "synthetic");
-    setError("");
+    setSubmitting(true);
+    try {
+      const response = await fetch(`${issuerUrl}/v1/otp/start`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ phone }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setError(
+          data.error === "verification_blocked" ||
+            data.error === "too_many_attempts" ||
+            data.error === "too_many_verification_requests"
+            ? "Nuk mund të dërgohet një kod tani. Provo përsëri më vonë."
+            : "WhatsApp nuk mund ta marrë kodin tani. Kontrollo numrin ose provo më vonë.",
+        );
+        return;
+      }
+      setChallenge(data.challengeId);
+      setChallengePhone(phone);
+      setOtpProvider(
+        data.otpProvider === "sentdm"
+          ? "sentdm"
+          : data.otpProvider === "prelude"
+            ? "prelude"
+            : "synthetic",
+      );
+      setError("");
+    } catch {
+      setError("Nuk u lidhëm me shërbimin e verifikimit. Provo përsëri.");
+    } finally {
+      setSubmitting(false);
+    }
   }
+
   async function check() {
-    const response = await fetch(`${issuerUrl}/v1/otp/check`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ challengeId: challenge, phone, code }),
-    });
-    const data = await response.json();
-    if (!response.ok) {
-      return setError(
-        data.error === "challenge_expired"
-          ? "Kodi ka skaduar. Mbylle këtë dritare dhe kërko një kod të ri."
-          : "Kodi nuk është i saktë.",
-      );
+    if (!/^\d{6}$/.test(code)) {
+      setError("Shkruaj kodin gjashtëshifror që erdhi në WhatsApp.");
+      return;
     }
-    onVerified(data.credential);
+    setSubmitting(true);
+    try {
+      const response = await fetch(`${issuerUrl}/v1/otp/check`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ challengeId: challenge, phone: challengePhone, code }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setError(
+          data.error === "challenge_expired"
+            ? "Kodi ka skaduar. Kërko një kod të ri."
+            : "Kodi nuk është i saktë.",
+        );
+        return;
+      }
+      onVerified(data.credential);
+    } catch {
+      setError("Nuk u lidhëm me shërbimin e verifikimit. Provo përsëri.");
+    } finally {
+      setSubmitting(false);
+    }
   }
+
   return (
     <DialogShell
-      title="Verifiko telefonin"
-      subtitle="Një verifikim jep një dëshmi 30-ditore për pjesëmarrje."
+      title="Verifiko me WhatsApp"
+      subtitle="Merr një kod në WhatsApp dhe një dëshmi anonime 30-ditore për pjesëmarrje."
       onClose={onClose}
     >
       <div className="privacy-callout">
-        <ShieldCheck />
+        <ShieldCheck aria-hidden="true" />
         <div>
           <strong>Kufiri i privatësisë</strong>
           <p>
-            Shërbimi i propozimeve dhe votimit nuk e merr numrin. Në këtë beta, shërbimi i izoluar i
-            Kuvend dhe ofruesi SMS do ta përpunonin përkohësisht.
+            Sent e dërgon kodin nga dërguesi i vet përmes WhatsApp-it. Vetëm shërbimi i izoluar i
+            verifikimit, Sent dhe WhatsApp (Meta) e përpunojnë numrin për këtë dërgesë; shërbimi i
+            propozimeve dhe votimit nuk e merr.
           </p>
           <ul className="trust-checks">
             <li>OTP provon vetëm kontrollin e numrit.</li>
-            <li>Dëshmia zgjat 30 ditë dhe përdoret pa profil qytetar.</li>
-            <li>Mund të lexosh dhe të mbyllësh dritaren pa vazhduar.</li>
+            <li>Vota dhe propozimi nuk i dërgohen Sent ose WhatsApp.</li>
+            <li>Dëshmia ruhet në këtë pajisje; nuk shkarkon asgjë.</li>
           </ul>
           <a className="trust-inline-link" href="/privatesia#si-mbrohet-vota">
             Lexo shpjegimin e plotë
@@ -1209,23 +1284,72 @@ function OtpDialog({
         </div>
       </div>
       {!challenge ? (
-        <>
+        <FieldGroup>
           <Field>
-            <Label htmlFor="otp-phone">Numri i telefonit</Label>
+            <Label htmlFor="otp-country">Shteti dhe kodi</Label>
+            <Combobox
+              items={countryOptions}
+              value={countryOptions.find((option) => option.value === country) ?? countryOptions[0]}
+              onValueChange={(option) => {
+                if (option) setCountry(option.value as CountryCode);
+              }}
+            >
+              <ComboboxInputGroup>
+                <ComboboxInput
+                  id="otp-country"
+                  autoComplete="country"
+                  placeholder="Kërko shtetin ose kodin"
+                />
+                <ComboboxTrigger aria-label="Hap listën e shteteve" />
+              </ComboboxInputGroup>
+              <ComboboxPortal>
+                <ComboboxPositioner>
+                  <ComboboxPopup>
+                    <ComboboxEmpty>Nuk u gjet asnjë shtet.</ComboboxEmpty>
+                    <ComboboxList>
+                      {(option: (typeof countryOptions)[number]) => (
+                        <ComboboxItem key={option.value} value={option}>
+                          {option.label}
+                        </ComboboxItem>
+                      )}
+                    </ComboboxList>
+                  </ComboboxPopup>
+                </ComboboxPositioner>
+              </ComboboxPortal>
+            </Combobox>
+            <FieldDescription>
+              Sugjerohet nga kodi i shtetit që dërgon Cloudflare; nuk ruhet me formularin. Mund ta
+              ndryshosh.
+            </FieldDescription>
+          </Field>
+          <Field>
+            <Label htmlFor="otp-phone">Numri në {countryLabel(country)}</Label>
             <Input
               id="otp-phone"
-              value={phone}
-              onChange={(event) => setPhone(event.target.value)}
+              value={nationalNumber}
+              onChange={(event) => setNationalNumber(event.target.value)}
               inputMode="tel"
+              autoComplete="tel-national"
+              placeholder={country === "AL" ? "069 123 4567" : "Numri pa kodin e shtetit"}
               autoFocus
             />
+            <FieldDescription>
+              Kodi dërgohet vetëm në WhatsApp. Nuk ka SMS rezervë.
+            </FieldDescription>
           </Field>
-          <Button className="full" onClick={() => void start()}>
-            Dërgo kodin
+          <Button className="full" disabled={submitting} onClick={() => void start()}>
+            {submitting ? "Po dërgohet…" : "Dërgo kodin në WhatsApp"}
           </Button>
-        </>
+        </FieldGroup>
       ) : (
-        <>
+        <FieldGroup>
+          <Alert>
+            <MessageSquareText aria-hidden="true" />
+            <AlertTitle>Kontrollo WhatsApp</AlertTitle>
+            <AlertDescription>
+              Kodi gjashtëshifror skadon pas pesë minutash. Mund ta kopjosh nga mesazhi.
+            </AlertDescription>
+          </Alert>
           <Field>
             <Label htmlFor="otp-code">Kodi gjashtëshifror</Label>
             <Input
@@ -1233,6 +1357,8 @@ function OtpDialog({
               value={code}
               onChange={(event) => setCode(event.target.value)}
               inputMode="numeric"
+              autoComplete="one-time-code"
+              pattern="[0-9]*"
               maxLength={6}
               autoFocus
               placeholder="123456"
@@ -1243,12 +1369,30 @@ function OtpDialog({
               Beta sintetike: përdor kodin <strong>123456</strong>.
             </p>
           )}
-          <Button className="full" onClick={() => void check()}>
-            Verifiko dhe vazhdo
-          </Button>
-        </>
+          <div className="dialog-actions">
+            <Button
+              variant="outline"
+              disabled={submitting}
+              onClick={() => {
+                setChallenge("");
+                setChallengePhone("");
+                setCode("");
+                setError("");
+              }}
+            >
+              Ndrysho numrin
+            </Button>
+            <Button disabled={submitting} onClick={() => void check()}>
+              {submitting ? "Po verifikohet…" : "Verifiko dhe vazhdo"}
+            </Button>
+          </div>
+        </FieldGroup>
       )}
-      {error && <p className="error">{error}</p>}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
     </DialogShell>
   );
 }
@@ -1643,16 +1787,10 @@ function ProposalDialog({
                 <strong>{displayPreferenceLabel(displayPreference)}</strong>
               </div>
             </div>
-            <label className="confirm-check">
-              <Checkbox
-                checked={confirmed}
-                onChange={(event) => setConfirmed(event.target.checked)}
-              />
-              <span>
-                <strong>E konfirmoj këtë version.</strong> E kuptoj se do të shqyrtohet nga
-                moderatorët dhe, nëse pranohet, do të hyjë në votim këshillues 14-ditor.
-              </span>
-            </label>
+            <CheckboxField checked={confirmed} onCheckedChange={setConfirmed}>
+              <strong>E konfirmoj këtë version.</strong> E kuptoj se do të shqyrtohet nga
+              moderatorët dhe, nëse pranohet, do të hyjë në votim këshillues 14-ditor.
+            </CheckboxField>
           </>
         )}
       </div>
@@ -1789,14 +1927,21 @@ function RecoveryDialog({ secret, onClose }: { secret: string; onClose: () => vo
       onClose={onClose}
     >
       <div className="receipt">
-        <LockKeyhole />
+        <LockKeyhole aria-hidden="true" />
         <code>{secret}</code>
       </div>
+      <div className="receipt-trust">
+        <ShieldCheck aria-hidden="true" />
+        <p>
+          Sekreti u ruajt automatikisht në këtë pajisje. Shkarkimi është vetëm kopje rezervë për
+          rast se pastron të dhënat e shfletuesit ose ndërron pajisje.
+        </p>
+      </div>
       <div className="dialog-actions">
-        <Button variant="outline" onClick={() => void navigator.clipboard.writeText(secret)}>
-          Kopjo
+        <Button variant="outline" onClick={download}>
+          Shkarko kopje
         </Button>
-        <Button onClick={download}>Shkarko dhe vazhdo</Button>
+        <Button onClick={onClose}>Vazhdo</Button>
       </div>
     </DialogShell>
   );
@@ -2062,19 +2207,17 @@ function NotificationDialog({ onClose }: { onClose: () => void }) {
         </FieldDescription>
         <div>
           {Object.entries(categoryLabels).map(([value, label]) => (
-            <label key={value}>
-              <Checkbox
-                checked={categories.includes(value)}
-                onChange={(event) =>
-                  setCategories((items) =>
-                    event.target.checked
-                      ? [...items, value]
-                      : items.filter((item) => item !== value),
-                  )
-                }
-              />
+            <CheckboxField
+              key={value}
+              checked={categories.includes(value)}
+              onCheckedChange={(checked) =>
+                setCategories((items) =>
+                  checked ? [...items, value] : items.filter((item) => item !== value),
+                )
+              }
+            >
               {label}
-            </label>
+            </CheckboxField>
           ))}
         </div>
       </fieldset>

@@ -27,6 +27,11 @@ describe("design-system compliance fixtures", () => {
       "field-group-contract",
       "export const A=()=> <fieldset><legend>Prova</legend><p>Prova</p></fieldset>;",
     ],
+    [
+      "checkbox-field-contract",
+      'import { Checkbox } from "@kuvend/ui"; export const A=()=> <Checkbox aria-label="Prano" />;',
+    ],
+    ["field-name-contract", 'import { Input } from "@kuvend/ui"; export const A=()=> <Input />;'],
   ])("rejects %s", (rule, source) =>
     expect(checkTypescript(source, "apps/web/bad.tsx").map((item) => item.rule)).toContain(rule),
   );
@@ -35,6 +40,13 @@ describe("design-system compliance fixtures", () => {
       checkTypescript(
         'import { FieldLegend, FieldDescription } from "@kuvend/ui"; export const A=()=> <fieldset aria-describedby="help"><FieldLegend>Prova</FieldLegend><FieldDescription id="help">Shto material.</FieldDescription></fieldset>;',
         "apps/web/good-fieldset.tsx",
+      ),
+    ).toEqual([]));
+  it("accepts owned checkbox fields and labelled controls", () =>
+    expect(
+      checkTypescript(
+        'import { CheckboxField, Input, Label } from "@kuvend/ui"; export const A=()=> <><CheckboxField>Prano</CheckboxField><Label htmlFor="name">Emri</Label><Input id="name" /></>;',
+        "apps/web/good-controls.tsx",
       ),
     ).toEqual([]));
   it("rejects raw CSS colors", () =>

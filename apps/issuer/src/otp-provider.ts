@@ -1,10 +1,14 @@
 export type OtpCheckResult = "valid" | "invalid" | "expired";
 
+export interface OtpStartResult {
+  verificationState?: string;
+}
+
 export interface OtpProvider {
-  readonly id: "synthetic" | "prelude";
+  readonly id: "synthetic" | "prelude" | "sentdm";
   readonly sendsRealMessages: boolean;
-  start(phone: string): Promise<void>;
-  check(phone: string, code: string): Promise<OtpCheckResult>;
+  start(phone: string): Promise<OtpStartResult | void>;
+  check(phone: string, code: string, verificationState?: string): Promise<OtpCheckResult>;
 }
 
 export class OtpProviderError extends Error {

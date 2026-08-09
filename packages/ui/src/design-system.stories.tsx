@@ -12,12 +12,24 @@ import {
   CardHeader,
   CardTitle,
   ChoiceButton,
+  CheckboxField,
+  Combobox,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxInputGroup,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxPopup,
+  ComboboxPortal,
+  ComboboxPositioner,
+  ComboboxTrigger,
   EmptyState,
   ExternalResearchActions,
   Field,
   FileUploader,
   Input,
   Label,
+  NativeSelect,
   ProposalCard,
   PublicSiteFooter,
   PublicSiteHeader,
@@ -70,6 +82,33 @@ export const Primitives: Story = {
         <Label htmlFor="story-title">Titulli</Label>
         <Input id="story-title" placeholder="Një titull i qartë" />
       </Field>
+      <Field>
+        <Label htmlFor="story-country">Shteti dhe kodi</Label>
+        <Combobox items={["Shqipëri (+355)", "Gjermani (+49)", "Itali (+39)"]}>
+          <ComboboxInputGroup>
+            <ComboboxInput id="story-country" placeholder="Kërko shtetin ose kodin" />
+            <ComboboxTrigger aria-label="Hap listën e shteteve" />
+          </ComboboxInputGroup>
+          <ComboboxPortal>
+            <ComboboxPositioner>
+              <ComboboxPopup>
+                <ComboboxEmpty>Nuk u gjet asnjë shtet.</ComboboxEmpty>
+                <ComboboxList>
+                  {(country: string) => <ComboboxItem value={country}>{country}</ComboboxItem>}
+                </ComboboxList>
+              </ComboboxPopup>
+            </ComboboxPositioner>
+          </ComboboxPortal>
+        </Combobox>
+      </Field>
+      <Field>
+        <Label htmlFor="story-category">Kategoria</Label>
+        <NativeSelect id="story-category" defaultValue="transport">
+          <option value="transport">Transport</option>
+          <option value="environment">Mjedis</option>
+        </NativeSelect>
+      </Field>
+      <CheckboxField defaultChecked>Njoftomë për Transport</CheckboxField>
       <SearchField aria-label="Kërko propozime" placeholder="Kërko propozime" />
       <Field>
         <Label htmlFor="story-body">Problemi</Label>

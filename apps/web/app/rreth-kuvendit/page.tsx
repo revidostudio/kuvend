@@ -11,7 +11,7 @@ export default function AboutPage() {
   return (
     <LegalPage
       title="Kush qëndron pas Kuvend"
-      lead="Kuvend është një projekt i pavarur, jokomercial dhe me kod të hapur, i zhvilluar në fazën themeluese nga kontribuesit e Revido Studio."
+      lead="Kuvend është një projekt i pavarur, jokomercial dhe me kod të hapur, i operuar nga Revido LLC."
     >
       <h2>Çfarë nuk jemi</h2>
       <p>
@@ -21,10 +21,21 @@ export default function AboutPage() {
       </p>
       <h2>Kush mban përgjegjësi sot</h2>
       <p>
-        Repository, produkti dhe dokumentacioni mirëmbahen publikisht nga organizata GitHub{" "}
-        <a href="https://github.com/revidostudio/kuvend">revidostudio/kuvend</a>. Faza aktuale është
-        themeluese dhe operatori i pavarur i verifikimit nuk është emëruar ende. Kjo është arsyeja
-        pse Kuvend nuk bën ende pretendimin përfundimtar “ne nuk mund ta shohim numrin”.
+        Revido LLC, 2106 House, Ave Suite 383, Cheyenne, Wyoming 82001, SHBA, është operatori dhe
+        kontrolluesi. Kompania paraqitet publikisht në{" "}
+        <a href="https://revido.co" rel="external noreferrer">
+          revido.co
+        </a>
+        . Repository, produkti dhe dokumentacioni mirëmbahen publikisht te{" "}
+        <a href="https://github.com/revidostudio/kuvend" rel="external noreferrer">
+          revidostudio/kuvend
+        </a>
+        .
+      </p>
+      <p>
+        Operatori i pavarur i verifikimit nuk është emëruar ende. Kjo është arsyeja pse Kuvend nuk
+        bën ende pretendimin përfundimtar “ne nuk mund ta shohim numrin” dhe nuk pranon pjesëmarrje
+        sensitive reale.
       </p>
       <h2>Si merren vendimet</h2>
       <p>

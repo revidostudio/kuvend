@@ -9,6 +9,8 @@ import { Tabs as BaseTabs } from "@base-ui/react/tabs";
 import { Tooltip as BaseTooltip } from "@base-ui/react/tooltip";
 import { Radio as BaseRadio } from "@base-ui/react/radio";
 import { RadioGroup as BaseRadioGroup } from "@base-ui/react/radio-group";
+import { Checkbox as BaseCheckbox } from "@base-ui/react/checkbox";
+import { Combobox as BaseCombobox } from "@base-ui/react/combobox";
 import { AlertDialog as BaseAlertDialog } from "@base-ui/react/alert-dialog";
 import { Drawer as BaseDrawer } from "@base-ui/react/drawer";
 import { cva, type VariantProps } from "class-variance-authority";
@@ -134,6 +136,95 @@ export const SearchField = React.forwardRef<HTMLInputElement, React.ComponentPro
   },
 );
 
+export const Combobox = BaseCombobox.Root;
+export const ComboboxPortal = BaseCombobox.Portal;
+export const ComboboxItemIndicator = BaseCombobox.ItemIndicator;
+export function ComboboxEmpty({ className, ...props }: BaseCombobox.Empty.Props) {
+  return (
+    <BaseCombobox.Empty
+      className={cn("px-3 py-4 text-sm text-[var(--kuvend-ink-soft)]", className)}
+      {...props}
+    />
+  );
+}
+export function ComboboxList({ className, ...props }: BaseCombobox.List.Props) {
+  return (
+    <BaseCombobox.List
+      className={cn("max-h-72 overflow-y-auto overscroll-contain", className)}
+      {...props}
+    />
+  );
+}
+export function ComboboxInputGroup({ className, ...props }: BaseCombobox.InputGroup.Props) {
+  return <BaseCombobox.InputGroup className={cn("relative", className)} {...props} />;
+}
+export const ComboboxTrigger = React.forwardRef<HTMLButtonElement, BaseCombobox.Trigger.Props>(
+  function ComboboxTrigger({ className, children, ...props }, ref) {
+    return (
+      <BaseCombobox.Trigger
+        ref={ref}
+        className={cn(
+          "absolute right-0 top-0 flex size-11 items-center justify-center rounded-md text-[var(--kuvend-ink-soft)] outline-none focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/25",
+          className,
+        )}
+        {...props}
+      >
+        {children ?? <ChevronDown aria-hidden="true" className="size-4" />}
+      </BaseCombobox.Trigger>
+    );
+  },
+);
+export const ComboboxInput = React.forwardRef<HTMLInputElement, BaseCombobox.Input.Props>(
+  function ComboboxInput({ className, ...props }, ref) {
+    return (
+      <BaseCombobox.Input
+        ref={ref}
+        className={cn(
+          "h-11 min-h-11 w-full rounded-md border border-[var(--kuvend-border-strong)] bg-[var(--kuvend-surface-raised)] px-3 pr-11 text-base text-[var(--kuvend-ink)] outline-none placeholder:text-[var(--kuvend-ink-soft)] focus-visible:border-[var(--kuvend-focus)] focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/20 disabled:bg-[var(--kuvend-surface)] disabled:opacity-70 sm:text-sm",
+          className,
+        )}
+        {...props}
+      />
+    );
+  },
+);
+export function ComboboxPositioner({ className, ...props }: BaseCombobox.Positioner.Props) {
+  return (
+    <BaseCombobox.Positioner
+      sideOffset={6}
+      className={cn("z-[70] outline-none", className)}
+      {...props}
+    />
+  );
+}
+export function ComboboxPopup({ className, ...props }: BaseCombobox.Popup.Props) {
+  return (
+    <BaseCombobox.Popup
+      className={cn(
+        "w-[var(--anchor-width)] max-w-[var(--available-width)] rounded-md border border-[var(--kuvend-border)] bg-[var(--kuvend-surface-raised)] p-1 text-[var(--kuvend-ink)] shadow-[var(--kuvend-shadow-overlay)] outline-none",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+export function ComboboxItem({ className, children, ...props }: BaseCombobox.Item.Props) {
+  return (
+    <BaseCombobox.Item
+      className={cn(
+        "grid min-h-11 cursor-default grid-cols-[1.25rem_1fr] items-center gap-2 rounded-md px-2 text-sm outline-none data-highlighted:bg-[var(--kuvend-surface)] data-selected:font-semibold",
+        className,
+      )}
+      {...props}
+    >
+      <BaseCombobox.ItemIndicator className="text-[var(--kuvend-accent)]">
+        <Check aria-hidden="true" className="size-4" />
+      </BaseCombobox.ItemIndicator>
+      <span className="min-w-0 truncate">{children}</span>
+    </BaseCombobox.Item>
+  );
+}
+
 export const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<"textarea">>(
   function Textarea({ className, ...props }, ref) {
     return (
@@ -153,36 +244,69 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, React.ComponentPro
 export const NativeSelect = React.forwardRef<HTMLSelectElement, React.ComponentProps<"select">>(
   function NativeSelect({ className, ...props }, ref) {
     return (
-      <select
-        ref={ref}
-        data-slot="native-select"
-        className={cn(
-          "h-11 min-h-11 w-full rounded-md border border-[var(--kuvend-border-strong)] bg-[var(--kuvend-surface-raised)] px-3 text-sm text-[var(--kuvend-ink)] outline-none focus-visible:border-[var(--kuvend-focus)] focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/20",
-          className,
-        )}
-        {...props}
-      />
+      <span data-slot="native-select-control" className="relative block w-full">
+        <select
+          ref={ref}
+          data-slot="native-select"
+          className={cn(
+            "h-11 min-h-11 w-full appearance-none rounded-md border border-[var(--kuvend-border-strong)] bg-[var(--kuvend-surface-raised)] px-3 pr-10 text-base text-[var(--kuvend-ink)] outline-none focus-visible:border-[var(--kuvend-focus)] focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/20 disabled:bg-[var(--kuvend-surface)] disabled:opacity-70 sm:text-sm",
+            className,
+          )}
+          {...props}
+        />
+        <ChevronDown
+          aria-hidden="true"
+          className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-[var(--kuvend-ink-soft)]"
+        />
+      </span>
     );
   },
 );
 
 export const Checkbox = React.forwardRef<
   HTMLInputElement,
-  Omit<React.ComponentProps<"input">, "type">
+  Omit<BaseCheckbox.Root.Props, "inputRef" | "ref">
 >(function Checkbox({ className, ...props }, ref) {
   return (
-    <input
-      ref={ref}
-      type="checkbox"
+    <BaseCheckbox.Root
+      inputRef={ref}
       data-slot="checkbox"
       className={cn(
-        "size-5 shrink-0 accent-[var(--kuvend-red)] outline-none focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/25",
+        "group inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-md outline-none focus-visible:ring-3 focus-visible:ring-[var(--kuvend-focus)]/25 disabled:pointer-events-none disabled:opacity-50 sm:size-6",
         className,
       )}
       {...props}
-    />
+    >
+      <span className="flex size-5 items-center justify-center rounded-md border border-[var(--kuvend-border-strong)] bg-[var(--kuvend-surface-raised)] transition-colors group-data-checked:border-[var(--kuvend-accent)] group-data-checked:bg-[var(--kuvend-accent)] group-data-checked:text-white">
+        <BaseCheckbox.Indicator>
+          <Check aria-hidden="true" className="size-3.5 stroke-[3]" />
+        </BaseCheckbox.Indicator>
+      </span>
+    </BaseCheckbox.Root>
   );
 });
+
+export function CheckboxField({
+  children,
+  className,
+  ...props
+}: Omit<BaseCheckbox.Root.Props, "className" | "ref"> & {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <label
+      data-slot="checkbox-field"
+      className={cn(
+        "flex min-h-11 cursor-pointer items-start gap-2 rounded-md border border-[var(--kuvend-border)] bg-[var(--kuvend-surface-raised)] px-2 py-1.5 text-sm leading-5 text-[var(--kuvend-ink)] transition-colors hover:border-[var(--kuvend-border-strong)] has-[[data-checked]]:border-[var(--kuvend-accent)] has-[[data-checked]]:bg-[var(--kuvend-accent-soft)]",
+        className,
+      )}
+    >
+      <Checkbox {...props} />
+      <span className="min-w-0 flex-1 py-2 sm:py-0.5">{children}</span>
+    </label>
+  );
+}
 
 export function Label({ className, ...props }: React.ComponentProps<"label">) {
   return (
