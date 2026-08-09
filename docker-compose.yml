@@ -70,6 +70,7 @@ services:
     environment:
       PORT: 4000
       SYNTHETIC_ONLY: "true"
+      ALLOW_SYNTHETIC_PARTICIPATION: "true"
       SYNTHETIC_SIGNING_KEY: development-only-change-me
       TRANSPARENCY_SIGNING_KEY: development-transparency-key
       TRANSPARENCY_KEY_EPOCH: synthetic-v1
@@ -87,6 +88,7 @@ services:
     environment:
       PORT: 4001
       SYNTHETIC_ONLY: "true"
+      ALLOW_SYNTHETIC_PARTICIPATION: "true"
       SYNTHETIC_SIGNING_KEY: development-only-change-me
       ISSUER_DIGEST_KEY: development-digest-key
       OTP_PROVIDER: synthetic

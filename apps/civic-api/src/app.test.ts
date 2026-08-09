@@ -5,10 +5,23 @@ import { buildApp } from "./app.js";
 import { MemoryCivicStore } from "./store.js";
 
 describe("civic API", () => {
+  it("rejects synthetic ballots when participation is not explicitly enabled", async () => {
+    const app = buildApp(new MemoryCivicStore());
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/ballots",
+      payload: {},
+    });
+
+    expect(response.statusCode).toBe(503);
+    expect(response.json()).toEqual({ error: "participation_not_available" });
+    await app.close();
+  });
+
   it("allows an explicitly configured deployment origin", async () => {
     const previous = process.env.CORS_ALLOWED_ORIGINS;
     process.env.CORS_ALLOWED_ORIGINS = "https://web.example.test";
-    const app = buildApp(new MemoryCivicStore());
+    const app = buildApp(new MemoryCivicStore(), { allowSyntheticParticipation: true });
     const response = await app.inject({
       method: "OPTIONS",
       url: "/v1/proposals",
@@ -21,7 +34,7 @@ describe("civic API", () => {
   });
 
   it("does not expose vote split before a participant votes", async () => {
-    const app = buildApp(new MemoryCivicStore());
+    const app = buildApp(new MemoryCivicStore(), { allowSyntheticParticipation: true });
     const response = await app.inject({ method: "GET", url: "/v1/proposals" });
     expect(response.statusCode).toBe(200);
     expect(response.json().proposals[0].votingRound).toHaveProperty("turnout");
@@ -30,7 +43,7 @@ describe("civic API", () => {
 
   it("does not expose a proposal before moderation in public catalogue or detail routes", async () => {
     const store = new MemoryCivicStore();
-    const app = buildApp(store);
+    const app = buildApp(store, { allowSyntheticParticipation: true });
     const created = await store.create({
       title: "Më shumë strehë në stacionet rurale",
       problem: "Udhëtarët në shumë stacione rurale presin pa mbrojtje nga shiu dhe dielli.",
@@ -60,7 +73,7 @@ describe("civic API", () => {
   });
 
   it("rejects phone data even with a valid credential", async () => {
-    const app = buildApp(new MemoryCivicStore());
+    const app = buildApp(new MemoryCivicStore(), { allowSyntheticParticipation: true });
     const response = await app.inject({
       method: "POST",
       url: "/v1/proposals",
@@ -81,7 +94,7 @@ describe("civic API", () => {
 
   it("supports capability revisions, two-review rejection, and appeals", async () => {
     const store = new MemoryCivicStore();
-    const app = buildApp(store);
+    const app = buildApp(store, { allowSyntheticParticipation: true });
     const capabilitySecret = randomUUID();
     const created = await app.inject({
       method: "POST",
@@ -153,7 +166,7 @@ describe("civic API", () => {
 
   it("rejects an incorrect author capability", async () => {
     const store = new MemoryCivicStore();
-    const app = buildApp(store);
+    const app = buildApp(store, { allowSyntheticParticipation: true });
     const created = await store.create({
       title: "Ndriçim më i mirë pranë shkollave",
       problem: "Rrugët pranë shkollave janë të errëta dhe të pasigurta për fëmijët.",
@@ -202,7 +215,7 @@ describe("civic API", () => {
 
   it("publishes a verifiable receipt list only after the round closes", async () => {
     const store = new MemoryCivicStore();
-    const app = buildApp(store);
+    const app = buildApp(store, { allowSyntheticParticipation: true });
     const proposal = (await store.list())[0]!;
     const commitment = "c".repeat(64);
     const vote = await app.inject({
@@ -238,7 +251,7 @@ describe("civic API", () => {
 
   it("publishes an optional unverified name on an argument", async () => {
     const store = new MemoryCivicStore();
-    const app = buildApp(store);
+    const app = buildApp(store, { allowSyntheticParticipation: true });
     const proposal = (await store.list()).find((item) => item.status === "voting_open")!;
     const response = await app.inject({
       method: "POST",
