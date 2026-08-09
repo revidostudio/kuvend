@@ -37,10 +37,19 @@ function digestPhone(phone: string, key: string): string {
   return createHmac("sha256", key).update(phone).digest("hex");
 }
 
-export function buildApp(options: { provider?: OtpProvider; store?: ChallengeStore } = {}) {
+export function buildApp(
+  options: {
+    provider?: OtpProvider;
+    store?: ChallengeStore;
+    allowSyntheticParticipation?: boolean;
+  } = {},
+) {
   const app = Fastify({ logger: false, bodyLimit: 2_000 });
   const challenges = options.store ?? new MemoryChallengeStore();
   const provider = options.provider ?? configuredProvider();
+  const syntheticParticipationAllowed =
+    options.allowSyntheticParticipation ?? process.env.ALLOW_SYNTHETIC_PARTICIPATION === "true";
+  const participationOpen = provider.id !== "synthetic" || syntheticParticipationAllowed;
   const signingKey = process.env.SYNTHETIC_SIGNING_KEY ?? "development-only-change-me";
   const digestKey = process.env.ISSUER_DIGEST_KEY ?? "development-digest-key";
   const configuredOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? "")
@@ -63,12 +72,16 @@ export function buildApp(options: { provider?: OtpProvider; store?: ChallengeSto
     ok: true,
     otpProvider: provider.id,
     realMessageDelivery: provider.sendsRealMessages,
+    participationOpen,
     credentialProtocol: "synthetic-development",
     operator: "kuvend-beta",
     challengeStore: challenges.kind,
   }));
 
   app.post("/v1/otp/start", async (request, reply) => {
+    if (!participationOpen) {
+      return reply.code(503).send({ error: "verification_not_available" });
+    }
     const parsed = otpStartSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: "invalid_phone" });
     const phoneDigest = digestPhone(parsed.data.phone, digestKey);
@@ -106,6 +119,9 @@ export function buildApp(options: { provider?: OtpProvider; store?: ChallengeSto
   });
 
   app.post("/v1/otp/check", async (request, reply) => {
+    if (!participationOpen) {
+      return reply.code(503).send({ error: "verification_not_available" });
+    }
     const parsed = otpCheckSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: "invalid_challenge" });
     const challenge = await challenges.get(parsed.data.challengeId);
