@@ -17,8 +17,13 @@ import Fastify from "fastify";
 import type { CivicStore } from "./store.js";
 import { ballotReceipt } from "./store.js";
 
-export function buildApp(store: CivicStore) {
+export function buildApp(
+  store: CivicStore,
+  options: { allowSyntheticParticipation?: boolean } = {},
+) {
   const app = Fastify({ logger: false, bodyLimit: 32_000 });
+  const syntheticParticipationAllowed =
+    options.allowSyntheticParticipation ?? process.env.ALLOW_SYNTHETIC_PARTICIPATION === "true";
   const signingKey = process.env.SYNTHETIC_SIGNING_KEY ?? "development-only-change-me";
   const transparencyKey = process.env.TRANSPARENCY_SIGNING_KEY ?? "development-transparency-key";
   const configuredOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? "")
@@ -35,7 +40,12 @@ export function buildApp(store: CivicStore) {
     methods: ["GET", "POST"],
   });
 
-  app.get("/health", async () => ({ ok: true, syntheticOnly: true, store: store.kind }));
+  app.get("/health", async () => ({
+    ok: true,
+    syntheticOnly: true,
+    participationOpen: syntheticParticipationAllowed,
+    store: store.kind,
+  }));
   app.get("/v1/proposals", async () => {
     await store.closeExpiredRounds();
     const proposals = (await store.list()).filter((proposal) =>
@@ -52,6 +62,9 @@ export function buildApp(store: CivicStore) {
   });
 
   app.post("/v1/proposals", async (request, reply) => {
+    if (!syntheticParticipationAllowed) {
+      return reply.code(503).send({ error: "participation_not_available" });
+    }
     const parsed = createProposalSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: "invalid_civic_payload" });
     assertCivicSafe({ ...parsed.data, credential: undefined });
@@ -116,6 +129,9 @@ export function buildApp(store: CivicStore) {
   });
 
   app.post("/v1/arguments", async (request, reply) => {
+    if (!syntheticParticipationAllowed) {
+      return reply.code(503).send({ error: "participation_not_available" });
+    }
     const parsed = createArgumentSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: "invalid_civic_payload" });
     assertCivicSafe({ ...parsed.data, credential: undefined });
@@ -132,6 +148,9 @@ export function buildApp(store: CivicStore) {
   });
 
   app.post("/v1/ballots", async (request, reply) => {
+    if (!syntheticParticipationAllowed) {
+      return reply.code(503).send({ error: "participation_not_available" });
+    }
     const parsed = castBallotSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: "invalid_civic_payload" });
     assertCivicSafe({ ...parsed.data, credential: undefined });
