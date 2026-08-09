@@ -35,7 +35,7 @@ export default function PrivacyPage() {
         <a href="mailto:security@kuvend.org">security@kuvend.org</a>.
       </p>
 
-      <h2 id="si-mbrohet-vota">2. Si ndahet verifikimi nga pjesëmarrja</h2>
+      <h2 id="si-mbrohet-vota">Si mbrohet vota pa emër</h2>
       <p>
         Shërbimi i izoluar i verifikimit merr përkohësisht numrin, kërkon kodin njëpërdorimësh dhe
         lëshon një kredencial anonim. Shërbimi qytetar merr vetëm provën kriptografike dhe një
