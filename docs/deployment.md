@@ -8,6 +8,8 @@ The civic database stores public participation records. The issuer database stor
 
 The local administrator is at `http://localhost:4003` and uses the development `ADMIN_API_KEY`. This is explicitly a synthetic control and must be replaced by passkey/MFA authentication before a sensitive pilot.
 
+Synthetic participation now fails closed unless `ALLOW_SYNTHETIC_PARTICIPATION=true` is set explicitly. Docker Compose sets it only for the local reference environment. Shared staging and production environments must leave it unset, so the issuer cannot expose the development code and the civic API cannot accept synthetic ballots.
+
 ## Public synthetic demo
 
 The demo may use a single Railway project in a European region with separately credentialed services and databases. It must contain no real identity data and display the synthetic status.

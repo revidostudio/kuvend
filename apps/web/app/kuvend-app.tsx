@@ -183,6 +183,7 @@ export function KuvendApp({
   const [receipt, setReceipt] = useState("");
   const [recoverySecret, setRecoverySecret] = useState("");
   const [credential, setCredential] = useState("");
+  const [participationOpen, setParticipationOpen] = useState<boolean | null>(null);
   const [notice, setNotice] = useState("");
   const [afterOtp, setAfterOtp] = useState<"proposal" | "argument" | "vote" | null>(null);
   const [authorCapability, setAuthorCapability] = useState("");
@@ -197,6 +198,23 @@ export function KuvendApp({
       "";
     if (storedCredential) localStorage.setItem("kuvend.credential.v1", storedCredential);
     setCredential(storedCredential);
+    fetch(`${issuerUrl}/health`, { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : Promise.reject()))
+      .then((data: { participationOpen?: boolean }) => {
+        const available = data.participationOpen === true;
+        setParticipationOpen(available);
+        if (!available) {
+          localStorage.removeItem("kuvend.credential.v1");
+          localStorage.removeItem("kuvend.syntheticCredential.v1");
+          setCredential("");
+        }
+      })
+      .catch(() => {
+        setParticipationOpen(false);
+        localStorage.removeItem("kuvend.credential.v1");
+        localStorage.removeItem("kuvend.syntheticCredential.v1");
+        setCredential("");
+      });
     if (!civicUrl) return;
     fetch(`${civicUrl}/v1/proposals`)
       .then((response) => (response.ok ? response.json() : Promise.reject()))
@@ -283,6 +301,15 @@ export function KuvendApp({
   const argumentsAgainst = selected.arguments.filter((argument) => argument.position === "against");
 
   function beginVote(choice: VoteChoice) {
+    if (participationOpen !== true) {
+      setNotice(
+        participationOpen === null
+          ? "Po kontrollojmë shërbimin e verifikimit. Provo përsëri pas pak."
+          : "Votimi është pezulluar derisa verifikimi i detyrueshëm të jetë aktiv.",
+      );
+      return;
+    }
+    setNotice("");
     setPendingVote(choice);
     if (!credential) {
       setAfterOtp("vote");
@@ -345,6 +372,11 @@ export function KuvendApp({
       }),
     });
     if (!response.ok) {
+      if (response.status === 401 || response.status === 503) {
+        localStorage.removeItem("kuvend.credential.v1");
+        localStorage.removeItem("kuvend.syntheticCredential.v1");
+        setCredential("");
+      }
       setNotice("Vota nuk u regjistrua. Mund të jetë votuar më parë nga kjo dëshmi.");
       return;
     }
@@ -679,6 +711,16 @@ export function KuvendApp({
                     </div>
                   ) : !voted ? (
                     <>
+                      {participationOpen === false && (
+                        <Alert>
+                          <ShieldCheck aria-hidden="true" />
+                          <AlertTitle>Votimi është përkohësisht i pezulluar</AlertTitle>
+                          <AlertDescription>
+                            Asnjë votë nuk pranohet pa verifikim të detyrueshëm. Votimi do të hapet
+                            kur shërbimi i verifikimit të jetë aktiv.
+                          </AlertDescription>
+                        </Alert>
+                      )}
                       <div className="turnout">
                         <Users />
                         <div>
@@ -690,6 +732,7 @@ export function KuvendApp({
                         <Button
                           variant="outline"
                           className={pendingVote === "support" ? "support active" : "support"}
+                          disabled={participationOpen !== true}
                           onClick={() => beginVote("support")}
                         >
                           <Check /> Mbështes
@@ -697,6 +740,7 @@ export function KuvendApp({
                         <Button
                           variant="outline"
                           className={pendingVote === "oppose" ? "oppose active" : "oppose"}
+                          disabled={participationOpen !== true}
                           onClick={() => beginVote("oppose")}
                         >
                           <X /> Kundërshtoj

@@ -4,10 +4,26 @@ import type { OtpProvider } from "./otp-provider.js";
 import { MemoryChallengeStore } from "./challenge-store.js";
 
 describe("synthetic issuer", () => {
+  it("fails closed when synthetic participation is not explicitly enabled", async () => {
+    const app = buildApp();
+    const health = await app.inject({ method: "GET", url: "/health" });
+    const started = await app.inject({
+      method: "POST",
+      url: "/v1/otp/start",
+      payload: { phone: "+355691234567" },
+    });
+
+    expect(health.json().participationOpen).toBe(false);
+    expect(started.statusCode).toBe(503);
+    expect(started.json()).toEqual({ error: "verification_not_available" });
+    expect(started.body).not.toContain("123456");
+    await app.close();
+  });
+
   it("allows an explicitly configured deployment origin", async () => {
     const previous = process.env.CORS_ALLOWED_ORIGINS;
     process.env.CORS_ALLOWED_ORIGINS = "https://web.example.test";
-    const app = buildApp();
+    const app = buildApp({ allowSyntheticParticipation: true });
     const response = await app.inject({
       method: "OPTIONS",
       url: "/v1/otp/start",
@@ -20,7 +36,7 @@ describe("synthetic issuer", () => {
   });
 
   it("issues a credential without echoing a phone number", async () => {
-    const app = buildApp();
+    const app = buildApp({ allowSyntheticParticipation: true });
     const started = await app.inject({
       method: "POST",
       url: "/v1/otp/start",
@@ -51,7 +67,7 @@ describe("synthetic issuer", () => {
         return "valid";
       },
     };
-    const app = buildApp({ provider });
+    const app = buildApp({ provider, allowSyntheticParticipation: true });
     const started = await app.inject({
       method: "POST",
       url: "/v1/otp/start",
@@ -134,7 +150,7 @@ describe("synthetic issuer", () => {
         return "valid";
       },
     };
-    const app = buildApp({ provider });
+    const app = buildApp({ provider, allowSyntheticParticipation: true });
     for (let index = 0; index < 3; index += 1) {
       const response = await app.inject({
         method: "POST",
