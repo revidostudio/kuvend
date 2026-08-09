@@ -920,25 +920,6 @@
   font-weight: 700;
   text-transform: uppercase;
 }
-.confirm-check {
-  display: flex;
-  gap: 0.75rem;
-  margin-top: 1rem;
-  border: 1px solid var(--kuvend-border);
-  border-radius: var(--kuvend-radius-md);
-  padding: 1rem;
-}
-.confirm-check input,
-.notification-topics input {
-  width: 1.25rem;
-  height: 1.25rem;
-  flex: none;
-  accent-color: var(--kuvend-red);
-}
-.confirm-check span {
-  font-size: 0.8125rem;
-  line-height: 1.5;
-}
 .position-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -956,17 +937,6 @@
   display: grid;
   gap: 0.75rem;
   border: 0;
-}
-.notification-topics label {
-  display: flex;
-  min-height: 2.75rem;
-  align-items: center;
-  gap: 0.75rem;
-  border: 1px solid var(--kuvend-border);
-  border-radius: var(--kuvend-radius-md);
-  background: var(--kuvend-surface-raised);
-  padding: 0.5rem 0.75rem;
-  font-size: 0.875rem;
 }
 .evidence-dialog-fields {
   display: grid;

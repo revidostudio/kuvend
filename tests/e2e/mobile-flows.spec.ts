@@ -49,8 +49,13 @@ function mobileOnly(width: number | undefined) {
 }
 
 async function completeOtp(page: Page) {
-  await expect(page.getByRole("heading", { name: "Verifiko telefonin" })).toBeVisible();
-  await page.getByRole("button", { name: "Dërgo kodin" }).click();
+  await expect(page.getByRole("heading", { name: "Verifiko me WhatsApp" })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Shteti dhe kodi" })).toHaveValue(
+    "Shqipëri (+355)",
+  );
+  await page.getByLabel(/Numri në Shqipëri/).fill("069 123 4567");
+  await page.getByRole("button", { name: "Dërgo kodin në WhatsApp" }).click();
+  await expect(page.getByText("Kontrollo WhatsApp")).toBeVisible();
   await page.getByLabel("Kodi gjashtëshifror").fill("123456");
   await page.getByRole("button", { name: "Verifiko dhe vazhdo" }).click();
 }
@@ -191,6 +196,15 @@ test("mobile vote completes OTP, final confirmation, result and receipt", async 
 }, testInfo) => {
   mobileOnly(testInfo.project.use.viewport?.width);
   let ballotPayload: Record<string, unknown> | undefined;
+  let otpStartPayload: Record<string, unknown> | undefined;
+  await page.route("**/v1/otp/start", async (route) => {
+    otpStartPayload = route.request().postDataJSON() as Record<string, unknown>;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ challengeId: "mobile-challenge", otpProvider: "synthetic" }),
+    });
+  });
   await page.route("**/v1/ballots", async (route) => {
     ballotPayload = route.request().postDataJSON() as Record<string, unknown>;
     await route.fulfill({
@@ -228,6 +242,35 @@ test("mobile vote completes OTP, final confirmation, result and receipt", async 
     credential: "mobile-synthetic-credential",
   });
   expect(JSON.stringify(ballotPayload)).not.toMatch(/phone|\+355/);
+  expect(otpStartPayload).toEqual({ phone: "+355691234567" });
+});
+
+test("country hint is ephemeral and the full country list is searchable", async ({
+  page,
+}, testInfo) => {
+  mobileOnly(testInfo.project.use.viewport?.width);
+  let countryRequest: { method: string; postData: string | null } | undefined;
+  await page.route("**/api/country", async (route) => {
+    countryRequest = {
+      method: route.request().method(),
+      postData: route.request().postData(),
+    };
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      headers: { "cache-control": "private, no-store, max-age=0" },
+      body: JSON.stringify({ country: "IT" }),
+    });
+  });
+  await page.goto("/");
+  await page.locator(".proposal-card").first().click();
+  await page.getByRole("button", { name: "Mbështes" }).click();
+  const country = page.getByRole("combobox", { name: "Shteti dhe kodi" });
+  await expect(country).toHaveValue("Itali (+39)");
+  await country.fill("Shqip");
+  await page.getByRole("option", { name: "Shqipëri (+355)" }).click();
+  await expect(country).toHaveValue("Shqipëri (+355)");
+  expect(countryRequest).toEqual({ method: "GET", postData: null });
 });
 
 test("mobile proposal wizard can skip AI, verify, submit and show recovery secret", async ({

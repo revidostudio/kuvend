@@ -4,6 +4,17 @@ import { describe, expect, it } from "vitest";
 import {
   Button,
   ChoiceButton,
+  CheckboxField,
+  Combobox,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxInputGroup,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxPopup,
+  ComboboxPortal,
+  ComboboxPositioner,
+  ComboboxTrigger,
   Field,
   FieldDescription,
   FieldLegend,
@@ -11,6 +22,7 @@ import {
   ExternalResearchActions,
   Input,
   Label,
+  NativeSelect,
   ProposalCard,
   PublicSiteFooter,
   PublicSiteHeader,
@@ -49,6 +61,53 @@ describe("Kuvend UI", () => {
       screen.getByRole("group", { name: "Prova dhe media Opsionale" }),
     ).toHaveAccessibleDescription("Shto vetëm materiale që mbështesin argumentin.");
     expect(screen.getAllByText("Prova dhe media")).toHaveLength(1);
+  });
+  it("owns checkbox and select interaction states", () => {
+    render(
+      <>
+        <CheckboxField defaultChecked onCheckedChange={() => undefined}>
+          Transport
+        </CheckboxField>
+        <Label htmlFor="country">Shteti dhe kodi</Label>
+        <NativeSelect id="country" defaultValue="AL">
+          <option value="AL">Shqipëri (+355)</option>
+          <option value="IT">Itali (+39)</option>
+        </NativeSelect>
+      </>,
+    );
+    expect(screen.getByRole("checkbox", { name: "Transport" })).toBeChecked();
+    expect(screen.getByLabelText("Shteti dhe kodi")).toHaveValue("AL");
+    fireEvent.click(screen.getByText("Transport"));
+    expect(screen.getByRole("checkbox", { name: "Transport" })).not.toBeChecked();
+  });
+  it("provides an owned searchable country combobox", async () => {
+    const { container } = render(
+      <>
+        <Label htmlFor="search-country">Shteti dhe kodi</Label>
+        <Combobox items={["Shqipëri (+355)", "Gjermani (+49)", "Itali (+39)"]}>
+          <ComboboxInputGroup>
+            <ComboboxInput id="search-country" placeholder="Kërko shtetin ose kodin" />
+            <ComboboxTrigger aria-label="Hap listën e shteteve" />
+          </ComboboxInputGroup>
+          <ComboboxPortal>
+            <ComboboxPositioner>
+              <ComboboxPopup>
+                <ComboboxEmpty>Nuk u gjet asnjë shtet.</ComboboxEmpty>
+                <ComboboxList>
+                  {(country: string) => <ComboboxItem value={country}>{country}</ComboboxItem>}
+                </ComboboxList>
+              </ComboboxPopup>
+            </ComboboxPositioner>
+          </ComboboxPortal>
+        </Combobox>
+      </>,
+    );
+    const input = container.querySelector<HTMLInputElement>("#search-country");
+    expect(input).not.toBeNull();
+    if (!input) throw new Error("searchable combobox input missing");
+    fireEvent.change(input, { target: { value: "Itali" } });
+    expect(await screen.findByRole("option", { name: "Itali (+39)" })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Gjermani (+49)" })).not.toBeInTheDocument();
   });
   it("keeps file selection uncontrolled and exposes preview progress", () => {
     const file = new File(["pamje"], "stacioni.png", { type: "image/png" });

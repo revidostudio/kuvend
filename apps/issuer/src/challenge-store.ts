@@ -3,6 +3,7 @@ import postgres from "postgres";
 export interface ChallengeRecord {
   id: string;
   phoneDigest: string;
+  verificationState?: string;
   expiresAt: number;
   attempts: number;
 }
@@ -86,11 +87,13 @@ export class PostgresChallengeStore implements ChallengeStore {
       create table if not exists otp_challenges (
         challenge_id uuid primary key,
         phone_digest text not null,
+        verification_state text,
         expires_at timestamptz not null,
         attempts integer not null default 0,
         created_at timestamptz not null default now()
       )
     `;
+    await this.sql`alter table otp_challenges add column if not exists verification_state text`;
     await this
       .sql`create index if not exists otp_challenges_expiry_idx on otp_challenges (expires_at)`;
     await this.sql`
@@ -104,10 +107,11 @@ export class PostgresChallengeStore implements ChallengeStore {
 
   async put(challenge: ChallengeRecord) {
     await this.sql`
-      insert into otp_challenges (challenge_id, phone_digest, expires_at, attempts)
-      values (${challenge.id}, ${challenge.phoneDigest}, ${new Date(challenge.expiresAt)}, ${challenge.attempts})
+      insert into otp_challenges (challenge_id, phone_digest, verification_state, expires_at, attempts)
+      values (${challenge.id}, ${challenge.phoneDigest}, ${challenge.verificationState ?? null}, ${new Date(challenge.expiresAt)}, ${challenge.attempts})
       on conflict (challenge_id) do update set
         phone_digest = excluded.phone_digest,
+        verification_state = excluded.verification_state,
         expires_at = excluded.expires_at,
         attempts = excluded.attempts
     `;
@@ -115,9 +119,15 @@ export class PostgresChallengeStore implements ChallengeStore {
 
   async get(id: string) {
     const rows = await this.sql<
-      Array<{ challenge_id: string; phone_digest: string; expires_at: Date; attempts: number }>
+      Array<{
+        challenge_id: string;
+        phone_digest: string;
+        verification_state: string | null;
+        expires_at: Date;
+        attempts: number;
+      }>
     >`
-      select challenge_id, phone_digest, expires_at, attempts
+      select challenge_id, phone_digest, verification_state, expires_at, attempts
       from otp_challenges where challenge_id = ${id}
     `;
     const row = rows[0];
@@ -125,6 +135,7 @@ export class PostgresChallengeStore implements ChallengeStore {
       ? {
           id: row.challenge_id,
           phoneDigest: row.phone_digest,
+          ...(row.verification_state ? { verificationState: row.verification_state } : {}),
           expiresAt: row.expires_at.getTime(),
           attempts: row.attempts,
         }

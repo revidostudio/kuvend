@@ -23,9 +23,14 @@ export default function PrivacyPage() {
       <h2>Çfarë përpunohet</h2>
       <p>
         Propozimet, argumentet dhe votat përpunohen nga shërbimi qytetar. Numri përpunohet
-        përkohësisht vetëm nga shërbimi i izoluar i verifikimit dhe ofruesi SMS. Në beta, ky shërbim
-        operohet ende nga Kuvend; prandaj nuk pretendojmë se mirëmbajtësit nuk mund ta shohin
-        numrin.
+        përkohësisht vetëm nga shërbimi i izoluar i verifikimit dhe nga Sent, i cili e dërgon kodin
+        nga dërguesi i vet përmes WhatsApp-it. WhatsApp (Meta) e përpunon numrin për këtë dërgesë.
+        Nuk ka dërgim me SMS. Në beta, shërbimi i verifikimit operohet ende nga Kuvend; prandaj nuk
+        pretendojmë se mirëmbajtësit nuk mund ta shohin numrin.
+      </p>
+      <p>
+        Shteti në formular sugjerohet nga kodi i vendit që Cloudflare i shton kërkesës. Kuvend kthen
+        vetëm kodin dyshkronjësh te shfletuesi dhe nuk e ruan adresën IP ose këtë sugjerim.
       </p>
       <h2>Çfarë nuk provon OTP-ja</h2>
       <p>
@@ -53,9 +58,11 @@ export default function PrivacyPage() {
       <h2>English summary</h2>
       <p>
         Kuvend’s civic service does not receive phone numbers. During beta, Kuvend’s isolated
-        verification service and its SMS provider temporarily process the number. OTP proves phone
-        control only. Results are advisory and non-representative. Sensitive launch remains blocked
-        pending independent operation, legal review, and security/privacy audits.
+        verification service and Sent temporarily process the number. Sent sends the code from its
+        managed sender through WhatsApp, and WhatsApp (Meta) processes the number for delivery.
+        There is no SMS fallback. OTP proves phone control only. Results are advisory and
+        non-representative. Sensitive launch remains blocked pending independent operation, legal
+        review, and security/privacy audits.
       </p>
     </LegalPage>
   );

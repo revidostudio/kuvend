@@ -72,6 +72,41 @@ describe("synthetic issuer", () => {
     await app.close();
   });
 
+  it("keeps Sent OTP verification state inside the issuer challenge", async () => {
+    let receivedState: string | undefined;
+    const provider: OtpProvider = {
+      id: "sentdm",
+      sendsRealMessages: true,
+      async start() {
+        return { verificationState: "a".repeat(64) };
+      },
+      async check(_phone, _code, verificationState) {
+        receivedState = verificationState;
+        return "valid";
+      },
+    };
+    const app = buildApp({ provider });
+    const started = await app.inject({
+      method: "POST",
+      url: "/v1/otp/start",
+      payload: { phone: "+355691234567" },
+    });
+    expect(started.body).not.toContain("a".repeat(64));
+    const checked = await app.inject({
+      method: "POST",
+      url: "/v1/otp/check",
+      payload: {
+        challengeId: started.json().challengeId,
+        phone: "+355691234567",
+        code: "123456",
+      },
+    });
+    expect(checked.statusCode).toBe(200);
+    expect(receivedState).toBe("a".repeat(64));
+    expect(checked.body).not.toContain("+355691234567");
+    await app.close();
+  });
+
   it("expires durable challenges without retaining a plaintext phone", async () => {
     const store = new MemoryChallengeStore();
     await store.put({
