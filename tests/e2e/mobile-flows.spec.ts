@@ -2,6 +2,17 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
+  await page.route("**/health", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        otpProvider: "synthetic",
+        participationOpen: true,
+      }),
+    }),
+  );
   await page.route("**/v1/proposals", async (route) => {
     if (route.request().method() === "GET") return route.abort();
     const draft = route.request().postDataJSON() as Record<string, unknown>;
@@ -42,6 +53,41 @@ test.beforeEach(async ({ page }) => {
       body: JSON.stringify({ credential: "mobile-synthetic-credential" }),
     }),
   );
+});
+
+test("production fails closed and discards a stale credential when verification is unavailable", async ({
+  page,
+}) => {
+  let ballotRequests = 0;
+  await page.route("**/health", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        otpProvider: "synthetic",
+        participationOpen: false,
+      }),
+    }),
+  );
+  await page.route("**/v1/ballots", async (route) => {
+    ballotRequests += 1;
+    await route.fulfill({
+      status: 503,
+      body: JSON.stringify({ error: "participation_not_available" }),
+    });
+  });
+  await page.addInitScript(() => {
+    localStorage.setItem("kuvend.credential.v1", "stale-synthetic-credential");
+  });
+
+  await page.goto("/");
+  await page.locator(".proposal-card").first().click();
+  await expect(page.getByText("Votimi është përkohësisht i pezulluar")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Mbështes" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Kundërshtoj" })).toBeDisabled();
+  expect(await page.evaluate(() => localStorage.getItem("kuvend.credential.v1"))).toBeNull();
+  expect(ballotRequests).toBe(0);
 });
 
 function mobileOnly(width: number | undefined) {
