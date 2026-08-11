@@ -1,12 +1,18 @@
 import { createPublicKey, sign, verify } from "node:crypto";
 import { Group } from "@semaphore-protocol/group";
 import { verifyProof } from "@semaphore-protocol/proof";
-import {
-  canonicalSnapshot,
-  type AnonymousProof,
-  type MembershipSnapshot,
-  type SignedMembershipRoot,
-} from "./anonymous.js";
+import type { AnonymousProof, MembershipSnapshot, SignedMembershipRoot } from "./anonymous.js";
+
+function canonicalSnapshot(snapshot: Omit<SignedMembershipRoot, "signature">): string {
+  return JSON.stringify({
+    protocol: snapshot.protocol,
+    epoch: snapshot.epoch,
+    root: snapshot.root,
+    memberCount: snapshot.memberCount,
+    issuedAt: snapshot.issuedAt,
+    expiresAt: snapshot.expiresAt,
+  });
+}
 
 function unsigned(snapshot: SignedMembershipRoot): Omit<SignedMembershipRoot, "signature"> {
   const { signature: _signature, ...value } = snapshot;
