@@ -170,7 +170,7 @@ export function PublicSiteHeader({
         className="flex min-h-11 items-center justify-center gap-2 border-t border-[var(--kuvend-border)] bg-[var(--kuvend-ink)] px-4 py-2 text-center text-xs text-[var(--kuvend-surface-raised)] outline-none focus-visible:ring-3 focus-visible:ring-inset focus-visible:ring-[var(--kuvend-focus)]"
       >
         <ShieldCheck className="size-3.5 text-[var(--kuvend-red)]" />
-        <strong>Beta sintetike.</strong>
+        <strong>Beta eksperimentale.</strong>
         <span>I pavarur dhe joqeveritar.</span>
         <span className="font-semibold underline underline-offset-2">Çfarë garanton?</span>
       </a>

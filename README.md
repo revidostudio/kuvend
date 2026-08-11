@@ -30,7 +30,7 @@ user client -> independent relay -> batch gateway -> civic service
 
 The issuer may learn that a phone was verified. The civic service may learn a proposal or vote. Neither service should receive enough information to join those facts. A separately operated relay hides the participant's network address from the civic service, while batching reduces simple timing correlation.
 
-See the [Product specification](docs/product-spec.md), [Architecture](docs/architecture.md), [Threat model](docs/threat-model.md), and [Roadmap](docs/roadmap.md).
+See the [Product specification](docs/product-spec.md), [Architecture](docs/architecture.md), [Threat model](docs/threat-model.md), [launch review packet](docs/launch-review.md), and [Roadmap](docs/roadmap.md).
 
 ## Why Better Auth is not in the anonymous path
 
@@ -47,7 +47,7 @@ The current milestone is **Phase 1: synthetic local reference system**. It inclu
 - a separate moderation dashboard with two-person high-risk decisions, institutional response tracking, and append-only administrator audits;
 - strict civic API schemas that reject phone numbers and stable participant identifiers;
 - isolated synthetic credential issuance, assistant, administration, and notification services;
-- an issuer-only OTP provider adapter with a minimal Prelude Verify v2 implementation for an approved Albania trial;
+- an issuer-only Sent adapter for a reviewed WhatsApp OTP trial, with provider credentials confined to the issuer trust domain;
 - proposal metadata, social preview images, a sitemap, robots policy, and an RSS feed for discovery and sharing;
 - encrypted, durable web-push subscriptions with topic selection and unsubscribe, without joining notification data to civic identities;
 - PostgreSQL-backed civic records and isolated, expiring OTP challenge digests, with in-memory adapters retained for deterministic tests.
@@ -60,7 +60,7 @@ Before accepting real phone numbers or civic submissions, the project still need
 4. independent operators for issuer, relay, and civic service;
 5. external cryptographic, application-security, and operational review.
 
-Do not deploy this repository for sensitive participation yet. The included OTP code and anonymous credential are deliberately synthetic development adapters, not the reviewed production privacy protocol.
+Do not deploy this repository for sensitive participation yet. Sent can verify control of a phone number, but the anonymous credential remains a development adapter rather than a reviewed production privacy protocol. Start an independent assessment with the [launch review packet](docs/launch-review.md).
 
 ## Development
 

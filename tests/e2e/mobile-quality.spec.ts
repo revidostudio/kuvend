@@ -18,6 +18,7 @@ test("proposal browsing has no overflow and meets the accessibility gate", async
 }, testInfo) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Propozimet" })).toBeVisible();
+  await expect(page.getByText("Beta eksperimentale.", { exact: true })).toBeVisible();
   const overflow = await page
     .locator(".site-shell")
     .evaluate((shell) => shell.scrollWidth > shell.clientWidth);
