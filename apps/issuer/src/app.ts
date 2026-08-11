@@ -1,17 +1,17 @@
-import { createHmac, randomUUID } from "node:crypto";
+import { createHmac, generateKeyPairSync, randomUUID } from "node:crypto";
 import cors from "@fastify/cors";
 import { otpCheckSchema, otpStartSchema } from "@kuvend/contracts";
-import { issueSyntheticCredential } from "@kuvend/credential";
+import { createMembershipSnapshot } from "@kuvend/credential/server";
 import Fastify from "fastify";
 import { OtpProviderError, type OtpProvider } from "./otp-provider.js";
 import { PreludeOtpProvider } from "./prelude-provider.js";
 import { SentDmOtpProvider } from "./sentdm-provider.js";
-import { SyntheticOtpProvider } from "./synthetic-provider.js";
+import { DevelopmentOtpProvider } from "./development-provider.js";
 import { MemoryChallengeStore, type ChallengeStore } from "./challenge-store.js";
 
 function configuredProvider(): OtpProvider {
-  const provider = process.env.OTP_PROVIDER ?? "synthetic";
-  if (provider === "synthetic") return new SyntheticOtpProvider();
+  const provider = process.env.OTP_PROVIDER ?? "development";
+  if (provider === "development") return new DevelopmentOtpProvider();
   if (provider === "prelude") {
     return new PreludeOtpProvider({
       apiKey: process.env.PRELUDE_API_KEY ?? "",
@@ -41,16 +41,26 @@ export function buildApp(
   options: {
     provider?: OtpProvider;
     store?: ChallengeStore;
-    allowSyntheticParticipation?: boolean;
+    allowDevelopmentParticipation?: boolean;
+    membershipPrivateKey?: string;
   } = {},
 ) {
   const app = Fastify({ logger: false, bodyLimit: 2_000 });
   const challenges = options.store ?? new MemoryChallengeStore();
   const provider = options.provider ?? configuredProvider();
-  const syntheticParticipationAllowed =
-    options.allowSyntheticParticipation ?? process.env.ALLOW_SYNTHETIC_PARTICIPATION === "true";
-  const participationOpen = provider.id !== "synthetic" || syntheticParticipationAllowed;
-  const signingKey = process.env.SYNTHETIC_SIGNING_KEY ?? "development-only-change-me";
+  const developmentParticipationAllowed =
+    options.allowDevelopmentParticipation ?? process.env.ALLOW_DEVELOPMENT_PARTICIPATION === "true";
+  const developmentKey = developmentParticipationAllowed
+    ? generateKeyPairSync("ed25519").privateKey.export({ type: "pkcs8", format: "pem" }).toString()
+    : "";
+  const membershipPrivateKey =
+    options.membershipPrivateKey ??
+    (process.env.ISSUER_MEMBERSHIP_PRIVATE_KEY_B64
+      ? Buffer.from(process.env.ISSUER_MEMBERSHIP_PRIVATE_KEY_B64, "base64").toString("utf8")
+      : developmentKey);
+  const participationOpen =
+    Boolean(membershipPrivateKey) &&
+    (provider.id !== "development" || developmentParticipationAllowed);
   const digestKey = process.env.ISSUER_DIGEST_KEY ?? "development-digest-key";
   const configuredOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? "")
     .split(",")
@@ -73,10 +83,32 @@ export function buildApp(
     otpProvider: provider.id,
     realMessageDelivery: provider.sendsRealMessages,
     participationOpen,
-    credentialProtocol: "synthetic-development",
+    credentialProtocol: "semaphore-v4",
     operator: "kuvend-beta",
     challengeStore: challenges.kind,
   }));
+
+  async function currentSnapshot() {
+    const members = await challenges.activeCommitments();
+    return createMembershipSnapshot(members, membershipPrivateKey, {
+      epoch: process.env.ISSUER_MEMBERSHIP_EPOCH ?? "v1",
+    });
+  }
+
+  app.get("/v1/membership", async (_request, reply) => {
+    if (!participationOpen) return reply.code(503).send({ error: "verification_not_available" });
+    const members = await challenges.activeCommitments();
+    if (members.length < 3) {
+      return reply
+        .code(425)
+        .send({ error: "anonymity_set_not_ready", memberCount: members.length });
+    }
+    return {
+      snapshot: createMembershipSnapshot(members, membershipPrivateKey, {
+        epoch: process.env.ISSUER_MEMBERSHIP_EPOCH ?? "v1",
+      }),
+    };
+  });
 
   app.post("/v1/otp/start", async (request, reply) => {
     if (!participationOpen) {
@@ -108,13 +140,14 @@ export function buildApp(
       ...(verificationState ? { verificationState } : {}),
       expiresAt: Date.now() + 5 * 60_000,
       attempts: 0,
+      identityCommitment: parsed.data.identityCommitment,
     });
     return reply.code(201).send({
       challengeId,
       expiresInSeconds: 300,
-      ...(provider.id === "synthetic" ? { developmentCode: "123456" } : {}),
+      ...(provider.id === "development" ? { developmentCode: "123456" } : {}),
       otpProvider: provider.id,
-      syntheticCredentialProtocol: true,
+      credentialProtocol: "semaphore-v4",
     });
   });
 
@@ -130,6 +163,9 @@ export function buildApp(
       return reply.code(410).send({ error: "challenge_expired" });
     }
     if (digestPhone(parsed.data.phone, digestKey) !== challenge.phoneDigest) {
+      return reply.code(400).send({ error: "invalid_challenge" });
+    }
+    if (parsed.data.identityCommitment !== challenge.identityCommitment) {
       return reply.code(400).send({ error: "invalid_challenge" });
     }
     const attempts = await challenges.incrementAttempts(parsed.data.challengeId);
@@ -152,11 +188,21 @@ export function buildApp(
       return reply.code(410).send({ error: "challenge_expired" });
     }
     if (result !== "valid") return reply.code(401).send({ error: "incorrect_code" });
+    const membershipExpiresAt = Date.now() + 30 * 24 * 60 * 60_000;
+    const membership = await challenges.putMembership({
+      phoneDigest: challenge.phoneDigest,
+      identityCommitment: challenge.identityCommitment,
+      expiresAt: membershipExpiresAt,
+    });
+    if (membership === "conflict") {
+      return reply.code(409).send({ error: "active_membership_exists" });
+    }
     await challenges.delete(parsed.data.challengeId);
     return {
-      credential: issueSyntheticCredential(signingKey),
+      snapshot: await currentSnapshot(),
+      membershipExpiresAt: new Date(membershipExpiresAt).toISOString(),
       expiresInDays: 30,
-      syntheticCredentialProtocol: true,
+      credentialProtocol: "semaphore-v4",
       otpProvider: provider.id,
       privacyNotice:
         provider.id === "sentdm"

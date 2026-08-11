@@ -1,6 +1,6 @@
 # Railway operations
 
-Kuvend's public synthetic demo runs in the Railway project `Kuvend`, production environment, with six application services and four isolated Postgres services. The live configuration is intentionally split between versioned application deployment files and Railway environment settings.
+Kuvend's experimental beta runs in the Railway project `Kuvend`, production environment, with six application services and four isolated Postgres services. The live configuration is intentionally split between versioned application deployment files and Railway environment settings.
 
 The project also has a `staging` environment. Its six application services follow the GitHub `staging` branch and use Railway-generated domains. Production follows `main`. A release is pushed to `staging`, verified there, and then promoted as the same revision through a pull request to `main`.
 
@@ -43,7 +43,7 @@ node .agents/skills/railway-kuvendi/scripts/configure.mjs --apply --activate-con
 
 ## Runtime policy
 
-`web`, `civic-api`, and all databases remain always on. `assistant`, `notifications`, and `admin` may sleep after inactivity. `issuer` may sleep only while OTP delivery and credentials are synthetic; keep it warm before any real OTP trial. Railway serverless sleeping is a container pause with a cold start, not a function runtime.
+`web`, `civic-api`, `issuer`, and all databases remain always on. `assistant`, `notifications`, and `admin` may sleep after inactivity. Railway serverless sleeping is a container pause with a cold start, not a function runtime.
 
 All services run one replica in EU West. Current measured memory is below 200 MB per application and 115 MB per database, so the demo caps are 0.5 GB for web and 0.25 GB for each Fastify/Postgres service. Reassess caps after load testing and before public promotion.
 
@@ -51,7 +51,7 @@ All services run one replica in EU West. Current measured memory is below 200 MB
 
 Browser requests use the six custom HTTPS domains. Server-side application calls and all database connections use Railway reference variables and private hostnames. Never replace a private reference with a rendered literal or `DATABASE_PUBLIC_URL`.
 
-Cloudflare proxies the public domains. This is appropriate for the synthetic demo, but it is shared infrastructure and does not satisfy the independent-operator privacy model required for a sensitive pilot. `admin.kuvend.org` is protected by the Cloudflare Access application `Kuvend Admin`, using the existing `Rodrig only` allow policy. An unauthenticated request must redirect to the `little-surf-992e.cloudflareaccess.com` login page; it must never reach the Railway admin service directly.
+Cloudflare proxies the public domains. This shared infrastructure does not satisfy the independent-operator privacy model required for stronger anonymity claims. `admin.kuvend.org` is protected by the Cloudflare Access application `Kuvend Admin`, using the existing `Rodrig only` allow policy. An unauthenticated request must redirect to the `little-surf-992e.cloudflareaccess.com` login page; it must never reach the Railway admin service directly.
 
 ## Production checks
 

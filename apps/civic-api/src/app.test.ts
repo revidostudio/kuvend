@@ -1,11 +1,36 @@
 import { createHash, randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { issueSyntheticCredential } from "@kuvend/credential";
 import { buildApp } from "./app.js";
 import { MemoryCivicStore } from "./store.js";
 
+const credentialProof = {
+  protocol: "semaphore-v4" as const,
+  snapshot: {
+    protocol: "semaphore-v4" as const,
+    epoch: "test",
+    root: "4",
+    memberCount: 3,
+    issuedAt: "2026-08-11T00:00:00.000Z",
+    expiresAt: "2027-08-11T00:00:00.000Z",
+    signature: "a".repeat(64),
+  },
+  proof: {
+    merkleTreeDepth: 1,
+    merkleTreeRoot: "4",
+    message: "1",
+    nullifier: "5",
+    scope: "6",
+    points: Array(8).fill("7") as [string, string, string, string, string, string, string, string],
+  },
+};
+const participationOptions = {
+  participationOpen: true,
+  membershipPublicKey: "test-public-key",
+  verifyParticipationProof: async () => true,
+};
+
 describe("civic API", () => {
-  it("rejects synthetic ballots when participation is not explicitly enabled", async () => {
+  it("rejects ballots when participation is not explicitly enabled", async () => {
     const app = buildApp(new MemoryCivicStore());
     const response = await app.inject({
       method: "POST",
@@ -21,7 +46,7 @@ describe("civic API", () => {
   it("allows an explicitly configured deployment origin", async () => {
     const previous = process.env.CORS_ALLOWED_ORIGINS;
     process.env.CORS_ALLOWED_ORIGINS = "https://web.example.test";
-    const app = buildApp(new MemoryCivicStore(), { allowSyntheticParticipation: true });
+    const app = buildApp(new MemoryCivicStore(), participationOptions);
     const response = await app.inject({
       method: "OPTIONS",
       url: "/v1/proposals",
@@ -34,7 +59,7 @@ describe("civic API", () => {
   });
 
   it("does not expose vote split before a participant votes", async () => {
-    const app = buildApp(new MemoryCivicStore(), { allowSyntheticParticipation: true });
+    const app = buildApp(new MemoryCivicStore(), participationOptions);
     const response = await app.inject({ method: "GET", url: "/v1/proposals" });
     expect(response.statusCode).toBe(200);
     expect(response.json().proposals[0].votingRound).toHaveProperty("turnout");
@@ -43,7 +68,7 @@ describe("civic API", () => {
 
   it("does not expose a proposal before moderation in public catalogue or detail routes", async () => {
     const store = new MemoryCivicStore();
-    const app = buildApp(store, { allowSyntheticParticipation: true });
+    const app = buildApp(store, participationOptions);
     const created = await store.create({
       title: "Më shumë strehë në stacionet rurale",
       problem: "Udhëtarët në shumë stacione rurale presin pa mbrojtje nga shiu dhe dielli.",
@@ -53,7 +78,8 @@ describe("civic API", () => {
       category: "transport",
       evidence: [],
       authorCapabilityHash: "a".repeat(64),
-      credential: issueSyntheticCredential("development-only-change-me"),
+      credentialProof,
+      submissionNullifier: "direct-create-1",
     });
 
     const catalogue = await app.inject({ method: "GET", url: "/v1/proposals" });
@@ -72,8 +98,8 @@ describe("civic API", () => {
     await app.close();
   });
 
-  it("rejects phone data even with a valid credential", async () => {
-    const app = buildApp(new MemoryCivicStore(), { allowSyntheticParticipation: true });
+  it("rejects phone data even with a valid anonymous proof", async () => {
+    const app = buildApp(new MemoryCivicStore(), participationOptions);
     const response = await app.inject({
       method: "POST",
       url: "/v1/proposals",
@@ -85,7 +111,7 @@ describe("civic API", () => {
         category: "community",
         evidence: [],
         authorCapabilityHash: "a".repeat(64),
-        credential: issueSyntheticCredential("development-only-change-me"),
+        credentialProof,
         phone: "+355690000000",
       },
     });
@@ -94,7 +120,7 @@ describe("civic API", () => {
 
   it("supports capability revisions, two-review rejection, and appeals", async () => {
     const store = new MemoryCivicStore();
-    const app = buildApp(store, { allowSyntheticParticipation: true });
+    const app = buildApp(store, participationOptions);
     const capabilitySecret = randomUUID();
     const created = await app.inject({
       method: "POST",
@@ -109,7 +135,7 @@ describe("civic API", () => {
         category: "transport",
         evidence: [],
         authorCapabilityHash: createHash("sha256").update(capabilitySecret).digest("hex"),
-        credential: issueSyntheticCredential("development-only-change-me"),
+        credentialProof,
       },
     });
     expect(created.statusCode).toBe(201);
@@ -166,7 +192,7 @@ describe("civic API", () => {
 
   it("rejects an incorrect author capability", async () => {
     const store = new MemoryCivicStore();
-    const app = buildApp(store, { allowSyntheticParticipation: true });
+    const app = buildApp(store, participationOptions);
     const created = await store.create({
       title: "Ndriçim më i mirë pranë shkollave",
       problem: "Rrugët pranë shkollave janë të errëta dhe të pasigurta për fëmijët.",
@@ -175,7 +201,8 @@ describe("civic API", () => {
       category: "community",
       evidence: [],
       authorCapabilityHash: "a".repeat(64),
-      credential: issueSyntheticCredential("development-only-change-me"),
+      credentialProof,
+      submissionNullifier: "direct-create-2",
     });
     const response = await app.inject({
       method: "POST",
@@ -196,7 +223,8 @@ describe("civic API", () => {
       category: "transport",
       evidence: [],
       authorCapabilityHash: "a".repeat(64),
-      credential: issueSyntheticCredential("development-only-change-me"),
+      credentialProof,
+      submissionNullifier: "direct-create-3",
     });
     const first = await store.moderate(created.proposal.id, {
       status: "rejected",
@@ -215,7 +243,7 @@ describe("civic API", () => {
 
   it("publishes a verifiable receipt list only after the round closes", async () => {
     const store = new MemoryCivicStore();
-    const app = buildApp(store, { allowSyntheticParticipation: true });
+    const app = buildApp(store, participationOptions);
     const proposal = (await store.list())[0]!;
     const commitment = "c".repeat(64);
     const vote = await app.inject({
@@ -225,8 +253,7 @@ describe("civic API", () => {
         proposalId: proposal.id,
         roundId: proposal.votingRound!.id,
         choice: "support",
-        credential: issueSyntheticCredential("development-only-change-me"),
-        nullifier: "d".repeat(64),
+        credentialProof,
         receiptCommitment: commitment,
       },
     });
@@ -251,7 +278,7 @@ describe("civic API", () => {
 
   it("publishes an optional unverified name on an argument", async () => {
     const store = new MemoryCivicStore();
-    const app = buildApp(store, { allowSyntheticParticipation: true });
+    const app = buildApp(store, participationOptions);
     const proposal = (await store.list()).find((item) => item.status === "voting_open")!;
     const response = await app.inject({
       method: "POST",
@@ -262,8 +289,7 @@ describe("civic API", () => {
         body: "Ky argument shpjegon qartë një përfitim publik.",
         evidence: [],
         publicAuthorName: "Arta Testuese",
-        credential: issueSyntheticCredential("development-only-change-me"),
-        contributionNullifier: "e".repeat(64),
+        credentialProof,
       },
     });
     expect(response.statusCode).toBe(201);

@@ -26,11 +26,19 @@ export default defineConfig({
       viewport: { width, height },
     },
   })),
-  webServer: {
-    command: `pnpm --filter @kuvend/web exec next start -p ${port}`,
-    url: baseURL,
-    reuseExistingServer: false,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      command: "node tests/e2e/api-server.mjs",
+      url: "http://127.0.0.1:4000/v1/proposals",
+      reuseExistingServer: false,
+      timeout: 30_000,
+    },
+    {
+      command: `pnpm --filter @kuvend/web exec next start -p ${port}`,
+      url: baseURL,
+      reuseExistingServer: false,
+      timeout: 120_000,
+    },
+  ],
   expect: { toHaveScreenshot: { animations: "disabled", maxDiffPixelRatio: 0.07 } },
 });

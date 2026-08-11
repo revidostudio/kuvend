@@ -14,7 +14,7 @@ deletion.
 | raw IP                                                  | network infrastructure may see it; app does not read/store it for country selection | OHTTP plus operator-specific no-retention controls                   |
 | AI draft                                                | process memory only; discarded after accept/cancel                                  | zero-retention agreement or self-hosting                             |
 | voice recording                                         | not implemented or retained                                                         | ephemeral self-hosted transcription before sensitive use             |
-| rejected unpublished draft                              | synthetic only                                                                      | fixed appeal window, then deletion                                   |
+| rejected unpublished draft                              | civic database only                                                                 | fixed appeal window, then deletion                                   |
 | accepted proposal, argument, evidence and public result | retained for public accountability                                                  | counsel-approved archive period and takedown exception               |
 | anonymous ballot commitment and scoped nullifier        | retained to prevent duplicate votes and verify inclusion                            | counsel- and cryptographer-approved archive period                   |
 | participant-held receipt/capability                     | stored by participant, not identity-recoverable by Kuvend                           | clear loss warning and client deletion controls                      |

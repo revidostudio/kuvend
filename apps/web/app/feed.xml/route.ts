@@ -1,4 +1,3 @@
-import { publicProposalPreviews } from "../seo-data";
 import { proposalPath } from "../proposal-url";
 
 const civicUrl =
@@ -18,7 +17,7 @@ export async function GET() {
     opensAt?: string;
     status?: string;
     votingRound?: { opensAt: string };
-  }> = [...publicProposalPreviews];
+  }> = [];
   try {
     const response = await fetch(`${civicUrl}/v1/proposals`, { next: { revalidate: 300 } });
     if (response.ok) proposals = (await response.json()).proposals;
