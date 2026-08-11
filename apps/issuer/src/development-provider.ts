@@ -1,7 +1,8 @@
 import type { OtpCheckResult, OtpProvider } from "./otp-provider.js";
 
-export class SyntheticOtpProvider implements OtpProvider {
-  readonly id = "synthetic" as const;
+/** Local-only provider. It never sends a message and cannot be enabled without an explicit flag. */
+export class DevelopmentOtpProvider implements OtpProvider {
+  readonly id = "development" as const;
   readonly sendsRealMessages = false;
 
   async start(_phone: string): Promise<void> {}

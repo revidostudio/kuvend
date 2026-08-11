@@ -8,7 +8,7 @@ and what is deliberately disabled in production.
 
 Production is fail-closed:
 
-- `OTP_PROVIDER=synthetic` is not a production participation mechanism.
+- `OTP_PROVIDER=development` is not a production participation mechanism.
 - The issuer reports `participationOpen=false` and returns `503 verification_not_available`.
 - The civic API reports `participationOpen=false` and returns `503 participation_not_available` for ballots.
 - The web application removes stale credentials and disables voting when issuer verification is unavailable.
@@ -74,4 +74,4 @@ curl -fsS https://api.kuvend.org/health
 
 The final two responses must show `participationOpen=false` until every launch
 gate above is approved. Enabling participation is a separate, reviewed change;
-it must never be achieved by deleting the synthetic safety checks.
+it must never be achieved by deleting fail-closed participation checks.

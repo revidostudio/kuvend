@@ -12,7 +12,7 @@ Participation is described as **verified phone participation**, never as citizen
 2. A participant drafts a proposal in Albanian by typing or, after the privacy gate is met, dictation.
 3. Optional assistance may correct grammar, simplify language, translate, and show likely duplicates.
 4. The participant explicitly accepts or rejects every suggested change.
-5. A synthetic credential is used in development. An approved low-stakes trial may use Sent for WhatsApp-only OTP through the isolated issuer to verify phone control once per 30-day credential period, while keeping the credential protocol explicitly synthetic.
+5. Sent provides WhatsApp-only OTP through the isolated issuer. After verification, the issuer adds a browser-created Semaphore identity commitment to a 30-day membership group and returns a signed public group snapshot.
 6. The proposal is submitted under a random per-proposal pseudonym or a self-provided, explicitly unverified public name.
 7. Moderators check scope, safety, personal information, impersonation, spam, and duplication within 72 hours.
 8. Every eligible, nonduplicate proposal enters a 14-day advisory vote covering two weekends.
@@ -37,4 +37,4 @@ Kuvend reports turnout, support, opposition, dates, method, and limitations. It 
 
 ## Release boundaries
 
-The synthetic reference system may use fake credentials and harmless topics. Real sensitive participation is blocked until the credential construction, OHTTP deployment, operators, legal basis, retention, and incident procedures receive independent review.
+The experimental beta uses real membership proofs and advisory ballots. Stronger anonymity and national-representativeness claims remain blocked until the integration, OHTTP deployment, operators, legal basis, retention, and incident procedures receive independent review.

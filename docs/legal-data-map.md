@@ -52,7 +52,7 @@ representative is required.
 | Cloudflare        | IP and network metadata; two-letter country header                         | processor/network provider; DPA, logging and transfer review                                                   |
 | Sent              | phone, OTP variables and delivery metadata                                 | verification processor; execute DPA, approve subprocessors, retention, dashboard access, transfer and deletion |
 | Meta/WhatsApp     | phone and message/delivery metadata                                        | communications provider; approve legal basis, transfer and retention                                           |
-| AI provider       | user-selected draft only                                                   | processor; zero-retention agreement or synthetic/low-risk use only                                             |
+| AI provider       | user-selected draft only                                                   | processor; zero-retention agreement or explicitly consented low-risk use only                                  |
 | independent relay | source IP and encrypted padded request                                     | future independent operator; no content access                                                                 |
 
 Sent is not an identity provider for the civic service. Only the isolated issuer may call Sent.
@@ -73,5 +73,4 @@ new data-flow decision, updated DPIA, and updated public notice.
 7. An independent cryptographer approves the credential construction and publishes test vectors.
 8. Role mailboxes are live and monitored before publication of real participation.
 
-Until these gates pass, Railway production remains a **synthetic demo** and OTP_PROVIDER remains
-synthetic.
+Until these gates pass, Railway production is labelled an **experimental beta** and stronger anonymity claims remain prohibited.

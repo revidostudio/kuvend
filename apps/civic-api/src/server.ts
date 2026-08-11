@@ -12,7 +12,7 @@ async function start(): Promise<void> {
   const app = buildApp(store);
   const port = Number(process.env.PORT ?? 4000);
   await app.listen({ port, host: "0.0.0.0" });
-  process.stdout.write(`Kuvend civic API listening on ${port} (${store.kind}; synthetic-only)\n`);
+  process.stdout.write(`Kuvend civic API listening on ${port} (${store.kind}; semaphore-v4)\n`);
 }
 
 start().catch((error: unknown) => {

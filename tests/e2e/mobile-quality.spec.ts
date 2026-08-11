@@ -1,10 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-test.beforeEach(async ({ page }) => {
-  await page.route("http://localhost:4000/**", (route) => route.abort());
-});
-
 async function openMobileFilters(page: import("@playwright/test").Page) {
   await expect(page.getByRole("heading", { name: "Propozimet" })).toBeVisible();
   await page.evaluate(() => document.getElementById("propozimet")?.scrollIntoView());
@@ -211,7 +207,9 @@ test("trust and transparency pages are indexable, connected and mobile-safe", as
   }
 
   await page.goto("/besimi");
-  await expect(page.getByText("Statusi aktual: beta sintetike")).toBeVisible();
+  await expect(
+    page.getByText("Statusi aktual: beta eksperimentale me pjesëmarrje reale"),
+  ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Kush merr çfarë?" })).toBeVisible();
   await expect(
     page.locator(".trust-directory").getByRole("link", { name: /Kush qëndron pas Kuvend/ }),
@@ -249,7 +247,9 @@ test("legal notices identify the controller, status, languages and complaint pat
 }) => {
   await page.goto("/privatesia");
   await expect(page.getByText("Revido LLC", { exact: false }).first()).toBeVisible();
-  await expect(page.getByText("Draft për shqyrtim ligjor.", { exact: false })).toBeVisible();
+  await expect(
+    page.getByLabel("Statusi i politikës").getByText("Beta eksperimentale.", { exact: false }),
+  ).toBeVisible();
   await expect(page.getByRole("link", { name: "Read this policy in English" })).toHaveAttribute(
     "href",
     "/en/privacy",
@@ -263,7 +263,7 @@ test("legal notices identify the controller, status, languages and complaint pat
   await page.goto("/en/terms");
   await expect(page.locator("main")).toHaveAttribute("lang", "en");
   await expect(page.getByText("Revido LLC", { exact: false }).first()).toBeVisible();
-  await expect(page.getByText("Draft for legal review.", { exact: false })).toBeVisible();
+  await expect(page.getByText("Experimental beta.", { exact: false })).toBeVisible();
   await expect(page.getByRole("link", { name: "Lexoji këto kushte në shqip" })).toHaveAttribute(
     "href",
     "/kushtet",

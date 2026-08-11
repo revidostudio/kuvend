@@ -20,8 +20,9 @@ export default function EnglishTermsPage() {
       alternate={{ href: "/kushtet", label: "Lexoji këto kushte në shqip" }}
     >
       <aside className="trust-status" aria-label="Terms status">
-        <strong>Draft for legal review.</strong> The public service remains a synthetic beta. These
-        terms become final only after legal review and before real participation is accepted.
+        <strong>Experimental beta.</strong> The service uses real WhatsApp verification and
+        anonymous membership proofs. These terms apply to current participation; material changes
+        are dated and announced prominently.
       </aside>
 
       <h2>1. Operator and acceptance</h2>
@@ -111,9 +112,9 @@ export default function EnglishTermsPage() {
 
       <h2>10. Law, changes, and contact</h2>
       <p>
-        The governing law and competent court for the final version will be confirmed by legal
-        review, considering the US operator, service in Albania, and users’ mandatory rights. This
-        draft does not select a forum that may restrict those rights.
+        These terms do not restrict mandatory rights available under applicable law. Jurisdiction
+        questions are assessed considering the US operator, the Albanian service, and users’
+        mandatory protections.
       </p>
       <p>
         Material changes receive a new date and prominent notice. Contact{" "}

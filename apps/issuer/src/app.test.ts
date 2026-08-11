@@ -3,14 +3,16 @@ import { buildApp } from "./app.js";
 import type { OtpProvider } from "./otp-provider.js";
 import { MemoryChallengeStore } from "./challenge-store.js";
 
-describe("synthetic issuer", () => {
-  it("fails closed when synthetic participation is not explicitly enabled", async () => {
+const identityCommitment = "123456789";
+
+describe("isolated issuer", () => {
+  it("fails closed when the local development provider is not explicitly enabled", async () => {
     const app = buildApp();
     const health = await app.inject({ method: "GET", url: "/health" });
     const started = await app.inject({
       method: "POST",
       url: "/v1/otp/start",
-      payload: { phone: "+355691234567" },
+      payload: { phone: "+355691234567", identityCommitment },
     });
 
     expect(health.json().participationOpen).toBe(false);
@@ -23,7 +25,7 @@ describe("synthetic issuer", () => {
   it("allows an explicitly configured deployment origin", async () => {
     const previous = process.env.CORS_ALLOWED_ORIGINS;
     process.env.CORS_ALLOWED_ORIGINS = "https://web.example.test";
-    const app = buildApp({ allowSyntheticParticipation: true });
+    const app = buildApp({ allowDevelopmentParticipation: true });
     const response = await app.inject({
       method: "OPTIONS",
       url: "/v1/otp/start",
@@ -35,12 +37,12 @@ describe("synthetic issuer", () => {
     else process.env.CORS_ALLOWED_ORIGINS = previous;
   });
 
-  it("issues a credential without echoing a phone number", async () => {
-    const app = buildApp({ allowSyntheticParticipation: true });
+  it("issues a signed anonymous-membership snapshot without echoing a phone number", async () => {
+    const app = buildApp({ allowDevelopmentParticipation: true });
     const started = await app.inject({
       method: "POST",
       url: "/v1/otp/start",
-      payload: { phone: "+355691234567" },
+      payload: { phone: "+355691234567", identityCommitment },
     });
     expect(started.statusCode).toBe(201);
     expect(started.body).not.toContain("+355691234567");
@@ -48,10 +50,11 @@ describe("synthetic issuer", () => {
     const checked = await app.inject({
       method: "POST",
       url: "/v1/otp/check",
-      payload: { challengeId, phone: "+355691234567", code: "123456" },
+      payload: { challengeId, phone: "+355691234567", code: "123456", identityCommitment },
     });
     expect(checked.statusCode).toBe(200);
-    expect(checked.json().credential).toMatch(/^synthetic\./);
+    expect(checked.json().credentialProtocol).toBe("semaphore-v4");
+    expect(checked.json().snapshot.members).toContain(identityCommitment);
     expect(checked.body).not.toContain("+355691234567");
     await app.close();
   });
@@ -67,11 +70,11 @@ describe("synthetic issuer", () => {
         return "valid";
       },
     };
-    const app = buildApp({ provider, allowSyntheticParticipation: true });
+    const app = buildApp({ provider, allowDevelopmentParticipation: true });
     const started = await app.inject({
       method: "POST",
       url: "/v1/otp/start",
-      payload: { phone: "+355691234567" },
+      payload: { phone: "+355691234567", identityCommitment },
     });
     const rejected = await app.inject({
       method: "POST",
@@ -80,6 +83,7 @@ describe("synthetic issuer", () => {
         challengeId: started.json().challengeId,
         phone: "+355692222222",
         code: "123456",
+        identityCommitment,
       },
     });
     expect(rejected.statusCode).toBe(400);
@@ -101,11 +105,11 @@ describe("synthetic issuer", () => {
         return "valid";
       },
     };
-    const app = buildApp({ provider });
+    const app = buildApp({ provider, allowDevelopmentParticipation: true });
     const started = await app.inject({
       method: "POST",
       url: "/v1/otp/start",
-      payload: { phone: "+355691234567" },
+      payload: { phone: "+355691234567", identityCommitment },
     });
     expect(started.body).not.toContain("a".repeat(64));
     const checked = await app.inject({
@@ -115,6 +119,7 @@ describe("synthetic issuer", () => {
         challengeId: started.json().challengeId,
         phone: "+355691234567",
         code: "123456",
+        identityCommitment,
       },
     });
     expect(checked.statusCode).toBe(200);
@@ -130,6 +135,7 @@ describe("synthetic issuer", () => {
       phoneDigest: "digest",
       expiresAt: 1,
       attempts: 0,
+      identityCommitment: "123",
     });
     expect(JSON.stringify(await store.get("00000000-0000-4000-8000-000000000000"))).not.toContain(
       "+355",
@@ -141,7 +147,7 @@ describe("synthetic issuer", () => {
   it("limits repeated verification starts before calling the provider", async () => {
     let starts = 0;
     const provider: OtpProvider = {
-      id: "synthetic",
+      id: "development",
       sendsRealMessages: false,
       async start() {
         starts += 1;
@@ -150,19 +156,19 @@ describe("synthetic issuer", () => {
         return "valid";
       },
     };
-    const app = buildApp({ provider, allowSyntheticParticipation: true });
+    const app = buildApp({ provider, allowDevelopmentParticipation: true });
     for (let index = 0; index < 3; index += 1) {
       const response = await app.inject({
         method: "POST",
         url: "/v1/otp/start",
-        payload: { phone: "+355691234567" },
+        payload: { phone: "+355691234567", identityCommitment },
       });
       expect(response.statusCode).toBe(201);
     }
     const limited = await app.inject({
       method: "POST",
       url: "/v1/otp/start",
-      payload: { phone: "+355691234567" },
+      payload: { phone: "+355691234567", identityCommitment },
     });
     expect(limited.statusCode).toBe(429);
     expect(limited.headers["retry-after"]).toBeTruthy();

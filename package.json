@@ -24,20 +24,22 @@
     "validate": "pnpm format:check && pnpm infra:check && pnpm design:check && pnpm design:test && pnpm typecheck && pnpm test && pnpm build && pnpm storybook:build"
   },
   "devDependencies": {
-    "@types/node": "^22.15.0",
     "@axe-core/playwright": "^4.12.1",
     "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.62.1",
+    "@semaphore-protocol/group": "4.14.3",
+    "@semaphore-protocol/identity": "4.14.3",
     "@storybook/addon-a11y": "^10.5.5",
     "@storybook/react-vite": "^10.5.5",
     "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^22.15.0",
     "concurrently": "^9.2.1",
-    "prettier": "^3.6.2",
     "postcss": "^8.5.6",
-    "ts-morph": "^26.0.0",
-    "tsx": "^4.20.5",
+    "prettier": "^3.6.2",
     "storybook": "^10.5.5",
     "tailwindcss": "^4.3.3",
+    "ts-morph": "^26.0.0",
+    "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
   }

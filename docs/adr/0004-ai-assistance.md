@@ -9,4 +9,4 @@ AI assistance is optional, side-by-side, and participant-approved. It may correc
 
 ## Consequences
 
-Drafts are sensitive ephemeral content. Provider-backed assistance is restricted to synthetic or explicitly low-risk use until zero-retention or self-hosted processing is approved.
+Drafts are sensitive ephemeral content. Provider-backed assistance is restricted to explicitly consented low-risk use until zero-retention or self-hosted processing is approved.

@@ -1,6 +1,5 @@
 import { ImageResponse } from "next/og";
 import { isPublicProposalStatus, type ProposalRecord } from "@kuvend/contracts";
-import { publicProposalPreviews } from "../../seo-data";
 import { extractProposalId } from "../../proposal-url";
 
 export const alt = "Propozim në Kuvend";
@@ -17,8 +16,7 @@ export default async function ProposalOpenGraphImage({
 }) {
   const { id } = await params;
   const proposalId = extractProposalId(id);
-  let proposal = publicProposalPreviews.find((item) => item.id === proposalId) as
-    { title: string; summary: string } | undefined;
+  let proposal: { title: string; summary: string } | undefined;
   try {
     const response = await fetch(`${civicUrl}/v1/proposals/${proposalId}`, {
       next: { revalidate: 300 },

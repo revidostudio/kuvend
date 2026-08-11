@@ -5,7 +5,7 @@ export interface OtpStartResult {
 }
 
 export interface OtpProvider {
-  readonly id: "synthetic" | "prelude" | "sentdm";
+  readonly id: "development" | "prelude" | "sentdm";
   readonly sendsRealMessages: boolean;
   start(phone: string): Promise<OtpStartResult | void>;
   check(phone: string, code: string, verificationState?: string): Promise<OtpCheckResult>;
