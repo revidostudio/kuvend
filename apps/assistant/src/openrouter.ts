@@ -38,6 +38,7 @@ export async function correctAlbanianGrammar(
   options: {
     apiKey?: string;
     model?: string;
+    preset?: string;
     baseUrl?: string;
     fetch?: typeof fetch;
   } = {},
@@ -58,7 +59,8 @@ export async function correctAlbanianGrammar(
       },
       signal: AbortSignal.timeout(20_000),
       body: JSON.stringify({
-        model: options.model ?? process.env.OPENROUTER_MODEL ?? "@preset/gdpr-and-zdr",
+        model: options.model ?? process.env.OPENROUTER_MODEL ?? "openai/gpt-4o-mini",
+        preset: options.preset ?? process.env.OPENROUTER_PRESET ?? "gdpr-and-zdr",
         temperature: 0,
         provider: { zdr: true, require_parameters: true },
         messages: [

@@ -41,7 +41,8 @@ describe("OpenRouter grammar adapter", () => {
       },
     });
     expect(result.problem).toBe("Ka shumë hapësira këtu.");
-    expect(requestBody?.model).toBe("@preset/gdpr-and-zdr");
+    expect(requestBody?.model).toBe("openai/gpt-4o-mini");
+    expect(requestBody?.preset).toBe("gdpr-and-zdr");
     expect(requestBody?.provider).toEqual({ zdr: true, require_parameters: true });
     expect(requestBody?.response_format).toMatchObject({ type: "json_schema" });
   });
