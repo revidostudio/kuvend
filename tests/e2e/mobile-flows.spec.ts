@@ -454,8 +454,7 @@ test("mobile vote completes OTP, final confirmation, result and receipt", async 
 
 test("country hint is ephemeral and the full country list is searchable", async ({
   page,
-}, testInfo) => {
-  mobileOnly(testInfo.project.use.viewport?.width);
+}) => {
   let countryRequest: { method: string; postData: string | null } | undefined;
   await page.route("**/api/country", async (route) => {
     countryRequest = {
@@ -473,10 +472,13 @@ test("country hint is ephemeral and the full country list is searchable", async 
   await page.locator(".proposal-card").first().click();
   await page.getByRole("button", { name: "Mbështes" }).click();
   const country = page.getByRole("combobox", { name: "Shteti dhe kodi telefonik" });
-  await expect(country).toHaveValue("Itali");
+  await expect(country).toHaveValue("Itali (+39)");
   await country.fill("Shqip");
-  await page.getByRole("option", { name: "Shqipëri +355" }).click();
-  await expect(country).toHaveValue("Shqipëri");
+  const albania = page.getByRole("option", { name: "Shqipëri +355" });
+  await expect(albania).toBeVisible();
+  await expect(albania).toHaveText(/Shqipëri.*\+355/);
+  await albania.click();
+  await expect(country).toHaveValue("Shqipëri (+355)");
   expect(countryRequest).toEqual({ method: "GET", postData: null });
 });
 

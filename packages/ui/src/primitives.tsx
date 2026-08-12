@@ -220,7 +220,7 @@ export function ComboboxItem({ className, children, ...props }: BaseCombobox.Ite
       <BaseCombobox.ItemIndicator className="text-[var(--kuvend-accent)]">
         <Check aria-hidden="true" className="size-4" />
       </BaseCombobox.ItemIndicator>
-      <span className="min-w-0 truncate">{children}</span>
+      <span className="w-full min-w-0 truncate">{children}</span>
     </BaseCombobox.Item>
   );
 }
