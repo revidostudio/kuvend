@@ -358,7 +358,8 @@ test("OTP delivery rejection keeps the selected country and allows correction", 
   await page.getByLabel("Numri i telefonit").fill("202 555 0147");
   await page.getByRole("button", { name: "Dërgo kodin në WhatsApp" }).click();
 
-  await expect(page.getByText(/WhatsApp nuk mund ta marrë kodin tani/)).toBeVisible();
+  await expect(page.getByText(/Kodi nuk mund të dërgohej në WhatsApp/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Dërgo kodin me SMS" })).toBeVisible();
   await expect(country).toHaveValue(/Shtetet e Bashkuara.*\(\+1\)/);
   await page.getByLabel("Numri i telefonit").fill("202 555 0188");
   await page.getByRole("button", { name: "Dërgo kodin në WhatsApp" }).click();
