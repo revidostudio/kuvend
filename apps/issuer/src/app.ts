@@ -11,7 +11,11 @@ import { MemoryChallengeStore, type ChallengeStore } from "./challenge-store.js"
 
 function configuredProvider(): OtpProvider {
   const provider = process.env.OTP_PROVIDER ?? "development";
-  if (provider === "development") return new DevelopmentOtpProvider();
+  // Keep the former deployment value as a fail-closed migration alias. It does
+  // not enable development participation without the separate explicit flag.
+  if (provider === "development" || provider === "synthetic") {
+    return new DevelopmentOtpProvider();
+  }
   if (provider === "prelude") {
     return new PreludeOtpProvider({
       apiKey: process.env.PRELUDE_API_KEY ?? "",

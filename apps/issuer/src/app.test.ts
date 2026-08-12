@@ -22,6 +22,36 @@ describe("isolated issuer", () => {
     await app.close();
   });
 
+  it("maps the legacy deployment provider name to the fail-closed development adapter", async () => {
+    const previousProvider = process.env.OTP_PROVIDER;
+    const previousAllowance = process.env.ALLOW_DEVELOPMENT_PARTICIPATION;
+    process.env.OTP_PROVIDER = "synthetic";
+    delete process.env.ALLOW_DEVELOPMENT_PARTICIPATION;
+
+    try {
+      const app = buildApp();
+      const health = await app.inject({ method: "GET", url: "/health" });
+      const started = await app.inject({
+        method: "POST",
+        url: "/v1/otp/start",
+        payload: { phone: "+355691234567", identityCommitment },
+      });
+
+      expect(health.json()).toMatchObject({
+        otpProvider: "development",
+        realMessageDelivery: false,
+        participationOpen: false,
+      });
+      expect(started.statusCode).toBe(503);
+      await app.close();
+    } finally {
+      if (previousProvider === undefined) delete process.env.OTP_PROVIDER;
+      else process.env.OTP_PROVIDER = previousProvider;
+      if (previousAllowance === undefined) delete process.env.ALLOW_DEVELOPMENT_PARTICIPATION;
+      else process.env.ALLOW_DEVELOPMENT_PARTICIPATION = previousAllowance;
+    }
+  });
+
   it("allows an explicitly configured deployment origin", async () => {
     const previous = process.env.CORS_ALLOWED_ORIGINS;
     process.env.CORS_ALLOWED_ORIGINS = "https://web.example.test";
