@@ -261,7 +261,7 @@ function mobileOnly(width: number | undefined) {
 async function completeOtp(page: Page) {
   await expect(page.getByRole("heading", { name: "Verifiko me WhatsApp" })).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Shteti dhe kodi telefonik" })).toHaveValue(
-    "Shqipëri (+355)",
+    "🇦🇱 Shqipëri (+355)",
   );
   await page.getByLabel("Numri i WhatsApp").fill("069 123 4567");
   await page.getByRole("button", { name: "Dërgo kodin në WhatsApp" }).click();
@@ -532,13 +532,13 @@ test("country hint is ephemeral and the full country list is searchable", async 
   await page.locator(".proposal-card").first().click();
   await page.getByRole("button", { name: "Mbështes" }).click();
   const country = page.getByRole("combobox", { name: "Shteti dhe kodi telefonik" });
-  await expect(country).toHaveValue("Itali (+39)");
+  await expect(country).toHaveValue("🇮🇹 Itali (+39)");
   await country.fill("Shqip");
   const albania = page.getByRole("option", { name: "Shqipëri +355" });
   await expect(albania).toBeVisible();
   await expect(albania).toHaveText(/Shqipëri.*\+355/);
   await albania.click();
-  await expect(country).toHaveValue("Shqipëri (+355)");
+  await expect(country).toHaveValue("🇦🇱 Shqipëri (+355)");
   expect(countryRequest).toEqual({ method: "GET", postData: null });
 });
 
