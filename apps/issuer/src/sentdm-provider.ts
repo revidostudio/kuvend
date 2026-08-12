@@ -10,6 +10,20 @@ interface SentDmProviderOptions {
   baseUrl?: string;
   codeParameter?: string;
   fetchImpl?: FetchLike;
+  deliveryCheckDelayMs?: number;
+  waitImpl?: (delayMs: number) => Promise<void>;
+}
+
+type SentMessageEnvelope = {
+  success?: boolean;
+  data?: {
+    recipients?: Array<{ message_id?: string }>;
+    status?: string;
+  };
+};
+
+function wait(delayMs: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, delayMs));
 }
 
 function otpDigest(code: string, key: string) {
@@ -22,6 +36,8 @@ export class SentDmOtpProvider implements OtpProvider {
   private readonly baseUrl: string;
   private readonly fetchImpl: FetchLike;
   private readonly codeParameter: string;
+  private readonly deliveryCheckDelayMs: number;
+  private readonly waitImpl: (delayMs: number) => Promise<void>;
 
   constructor(private readonly options: SentDmProviderOptions) {
     if (!options.apiKey || options.apiKey.startsWith("PLACEHOLDER_")) {
@@ -39,6 +55,8 @@ export class SentDmOtpProvider implements OtpProvider {
     // Keep this configurable for future templates, but make the provider's
     // safe default match Sent's published template contract.
     this.codeParameter = options.codeParameter ?? "var_1";
+    this.deliveryCheckDelayMs = options.deliveryCheckDelayMs ?? 500;
+    this.waitImpl = options.waitImpl ?? wait;
   }
 
   async start(phone: string) {
@@ -81,10 +99,39 @@ export class SentDmOtpProvider implements OtpProvider {
     }
 
     const payload = (await response.json().catch(() => undefined)) as
-      { success?: boolean } | undefined;
+      SentMessageEnvelope | undefined;
     if (!payload?.success) {
       throw new OtpProviderError("verification_provider_unavailable", 503);
     }
+
+    const messageId = payload.data?.recipients?.[0]?.message_id;
+    if (messageId) {
+      await this.waitImpl(this.deliveryCheckDelayMs);
+      let statusResponse: Response;
+      try {
+        statusResponse = await this.fetchImpl(
+          `${this.baseUrl}/v3/messages/${encodeURIComponent(messageId)}`,
+          {
+            method: "GET",
+            headers: { accept: "application/json", "x-api-key": this.options.apiKey },
+            signal: AbortSignal.timeout(5_000),
+          },
+        );
+      } catch {
+        // Sent accepted the message already. A status-check outage must not
+        // cause a second message to be sent by an automatic retry.
+        statusResponse = new Response(null, { status: 503 });
+      }
+
+      if (statusResponse.ok) {
+        const statusPayload = (await statusResponse.json().catch(() => undefined)) as
+          SentMessageEnvelope | undefined;
+        if (statusPayload?.data?.status?.toUpperCase() === "FAILED") {
+          throw new OtpProviderError("verification_unavailable", 400);
+        }
+      }
+    }
+
     return { verificationState: otpDigest(code, this.options.verificationKey) };
   }
 

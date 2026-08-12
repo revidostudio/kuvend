@@ -130,7 +130,7 @@ describe("Kuvend UI", () => {
         phoneInputProps={{ id: "phone", "aria-label": "Numri i WhatsApp" }}
       />,
     );
-    expect(screen.getByLabelText("Shteti dhe kodi telefonik")).toHaveValue("Shqipëri (+355)");
+    expect(screen.getByLabelText("Shteti dhe kodi telefonik")).toHaveValue("🇦🇱 Shqipëri (+355)");
     expect(screen.getByLabelText("Numri i WhatsApp")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Kërko ose ndrysho shtetin" }));
     expect(
@@ -138,7 +138,10 @@ describe("Kuvend UI", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "Shqipëri +355" })).toBeVisible();
     expect(screen.getByRole("option", { name: "Shtetet e Bashkuara +1" })).toHaveTextContent(
-      "Shtetet e Bashkuara+1",
+      "🇺🇸Shtetet e Bashkuara+1",
+    );
+    expect(screen.getByRole("option", { name: "Shqipëri +355" })).toHaveTextContent(
+      "🇦🇱Shqipëri+355",
     );
     fireEvent.change(screen.getByLabelText("Shteti dhe kodi telefonik"), {
       target: { value: "355" },

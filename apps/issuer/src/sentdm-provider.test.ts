@@ -6,7 +6,10 @@ const verificationKey = "test-verification-key-with-at-least-32-characters";
 
 describe("SentDmOtpProvider", () => {
   it("uses WhatsApp only and verifies the locally held OTP digest", async () => {
-    const fetchImpl = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+    const fetchImpl = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      if (String(url).endsWith("/v3/messages/message-1")) {
+        return new Response(JSON.stringify({ success: true, data: { status: "QUEUED" } }));
+      }
       const request = JSON.parse(String(init?.body)) as {
         to: string[];
         channel: string[];
@@ -18,13 +21,20 @@ describe("SentDmOtpProvider", () => {
       expect(request.template.id).toBe("otp-template");
       expect(request.template.parameters.var_1).toMatch(/^\d{6}$/);
       expect(request.sandbox).toBe(false);
-      return new Response(JSON.stringify({ success: true }), { status: 202 });
+      return new Response(
+        JSON.stringify({
+          success: true,
+          data: { recipients: [{ message_id: "message-1" }] },
+        }),
+        { status: 202 },
+      );
     });
     const provider = new SentDmOtpProvider({
       apiKey: "sk_test_example",
       templateId: "otp-template",
       verificationKey,
       fetchImpl: fetchImpl as typeof fetch,
+      deliveryCheckDelayMs: 0,
     });
 
     const started = await provider.start("+355691234567");
@@ -42,6 +52,37 @@ describe("SentDmOtpProvider", () => {
     expect(await provider.check("+355691234567", "000000", started.verificationState)).toBe(
       "invalid",
     );
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects a message that Sent accepts and immediately marks failed", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: { recipients: [{ message_id: "failed-message" }] },
+          }),
+          { status: 202 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ success: true, data: { status: "FAILED" } })),
+      );
+    const provider = new SentDmOtpProvider({
+      apiKey: "sk_test_example",
+      templateId: "otp-template",
+      verificationKey,
+      fetchImpl: fetchImpl as typeof fetch,
+      deliveryCheckDelayMs: 0,
+    });
+
+    await expect(provider.start("+17653987177")).rejects.toMatchObject({
+      publicCode: "verification_unavailable",
+      statusCode: 400,
+    });
+    expect(fetchImpl.mock.calls[1]?.[0]).toBe("https://api.sent.dm/v3/messages/failed-message");
   });
 
   it("rejects placeholder credentials and missing template configuration", () => {
