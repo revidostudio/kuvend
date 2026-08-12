@@ -1313,6 +1313,8 @@ function OtpDialog({
   const [nationalNumber, setNationalNumber] = useState("");
   const [challengePhone, setChallengePhone] = useState("");
   const [challenge, setChallenge] = useState("");
+  const [challengeChannel, setChallengeChannel] = useState<"whatsapp" | "sms">("whatsapp");
+  const [smsFallbackAvailable, setSmsFallbackAvailable] = useState(false);
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -1358,7 +1360,7 @@ function OtpDialog({
     };
   }, []);
 
-  async function start() {
+  async function start(deliveryChannel: "whatsapp" | "sms" = "whatsapp") {
     if (!identity) {
       setError("Po përgatisim dëshminë anonime. Provo përsëri pas një çasti.");
       return;
@@ -1373,15 +1375,22 @@ function OtpDialog({
       const response = await fetch(`${issuerUrl}/v1/otp/start`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ phone, identityCommitment: identity.commitment }),
+        body: JSON.stringify({ phone, identityCommitment: identity.commitment, deliveryChannel }),
       });
       const data = await response.json();
       if (!response.ok) {
+        if (deliveryChannel === "whatsapp" && data.error === "verification_unavailable") {
+          setSmsFallbackAvailable(true);
+          setError("Kodi nuk mund të dërgohej në WhatsApp. Mund ta provosh me SMS.");
+          return;
+        }
         setError(otpStartErrorMessage(data.error));
         return;
       }
       setChallenge(data.challengeId);
       setChallengePhone(phone);
+      setChallengeChannel(data.deliveryChannel === "sms" ? "sms" : deliveryChannel);
+      setSmsFallbackAvailable(false);
       setError("");
     } catch {
       setError("Nuk u lidhëm me shërbimin e verifikimit. Provo përsëri.");
@@ -1393,7 +1402,9 @@ function OtpDialog({
   async function check() {
     if (!identity) return;
     if (!/^\d{6}$/.test(code)) {
-      setError("Shkruaj kodin gjashtëshifror që erdhi në WhatsApp.");
+      setError(
+        `Shkruaj kodin gjashtëshifror që erdhi ${challengeChannel === "sms" ? "me SMS" : "në WhatsApp"}.`,
+      );
       return;
     }
     setSubmitting(true);
@@ -1433,8 +1444,8 @@ function OtpDialog({
 
   return (
     <DialogShell
-      title="Verifiko me WhatsApp"
-      subtitle="Merr një kod në WhatsApp dhe një dëshmi anonime 30-ditore për pjesëmarrje."
+      title="Verifiko numrin"
+      subtitle="Merr kodin në WhatsApp ose, nëse nuk funksionon, zgjidh SMS."
       onClose={onClose}
     >
       <div className="privacy-callout">
@@ -1442,13 +1453,13 @@ function OtpDialog({
         <div>
           <strong>Kufiri i privatësisë</strong>
           <p>
-            Sent e dërgon kodin nga dërguesi i vet përmes WhatsApp-it. Vetëm shërbimi i izoluar i
-            verifikimit, Sent dhe WhatsApp (Meta) e përpunojnë numrin për këtë dërgesë; shërbimi i
-            propozimeve dhe votimit nuk e merr.
+            Sent e dërgon kodin përmes WhatsApp-it ose SMS-së. Vetëm shërbimi i izoluar i
+            verifikimit, Sent dhe ofruesi i kanalit që zgjedh e përpunojnë numrin për këtë dërgesë;
+            shërbimi i propozimeve dhe votimit nuk e merr.
           </p>
           <ul className="trust-checks">
             <li>OTP provon vetëm kontrollin e numrit.</li>
-            <li>Vota dhe propozimi nuk i dërgohen Sent ose WhatsApp.</li>
+            <li>Vota dhe propozimi nuk i dërgohen Sent, WhatsApp-it ose operatorit celular.</li>
             <li>Dëshmia ruhet në këtë pajisje; nuk shkarkon asgjë.</li>
           </ul>
           <a className="trust-inline-link" href="/privatesia#si-mbrohet-vota">
@@ -1468,7 +1479,7 @@ function OtpDialog({
       {!challenge ? (
         <FieldGroup>
           <Field>
-            <Label htmlFor="otp-phone">Numri i WhatsApp</Label>
+            <Label htmlFor="otp-phone">Numri i telefonit</Label>
             <PhoneNumberField
               countries={countryOptions}
               country={
@@ -1487,8 +1498,8 @@ function OtpDialog({
               }}
             />
             <FieldDescription id="otp-phone-description">
-              Kërko shtetin te menuja e kodit. Sugjerimi nga vendndodhja nuk ruhet. Kodi dërgohet
-              vetëm në WhatsApp përmes Sent.
+              Kërko shtetin te menuja e kodit. Sugjerimi nga vendndodhja nuk ruhet. Provojmë
+              WhatsApp-in fillimisht; SMS-ja dërgohet vetëm nëse e zgjedh vetë.
             </FieldDescription>
           </Field>
           <div className="dialog-actions otp-actions">
@@ -1500,19 +1511,32 @@ function OtpDialog({
             <Button
               className="full"
               disabled={submitting || !identity}
-              onClick={() => void start()}
+              onClick={() => void start("whatsapp")}
             >
               {submitting ? "Po dërgohet…" : "Dërgo kodin në WhatsApp"}
             </Button>
           </div>
+          {smsFallbackAvailable && (
+            <Button
+              className="full"
+              variant="outline"
+              disabled={submitting || !identity}
+              onClick={() => void start("sms")}
+            >
+              {submitting ? "Po dërgohet…" : "Dërgo kodin me SMS"}
+            </Button>
+          )}
         </FieldGroup>
       ) : (
         <FieldGroup>
           <Alert>
             <MessageSquareText aria-hidden="true" />
-            <AlertTitle>Kontrollo WhatsApp</AlertTitle>
+            <AlertTitle>
+              {challengeChannel === "sms" ? "Kontrollo mesazhet SMS" : "Kontrollo WhatsApp"}
+            </AlertTitle>
             <AlertDescription>
-              Kodi gjashtëshifror skadon pas pesë minutash. Mund ta kopjosh nga mesazhi.
+              Kodi gjashtëshifror skadon pas pesë minutash dhe erdhi
+              {challengeChannel === "sms" ? " me SMS." : " në WhatsApp."}
             </AlertDescription>
           </Alert>
           <Field>
@@ -1541,6 +1565,8 @@ function OtpDialog({
                 onClick={() => {
                   setChallenge("");
                   setChallengePhone("");
+                  setChallengeChannel("whatsapp");
+                  setSmsFallbackAvailable(false);
                   setCode("");
                   setError("");
                 }}

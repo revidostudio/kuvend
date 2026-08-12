@@ -20,9 +20,9 @@ export default function EnglishPrivacyPage() {
       alternate={{ href: "/privatesia", label: "Lexoje këtë politikë në shqip" }}
     >
       <aside className="trust-status" aria-label="Policy status">
-        <strong>Experimental beta.</strong> This policy describes the live WhatsApp verification,
-        Semaphore membership system, and current limits. Assessments, processor agreements, and
-        independent reviews are published as they are completed.
+        <strong>Experimental beta.</strong> This policy describes live WhatsApp verification, the
+        user-selected SMS backup, the Semaphore membership system, and current limits. Assessments,
+        processor agreements, and independent reviews are published as they are completed.
       </aside>
 
       <h2>1. Who is responsible</h2>
@@ -44,10 +44,11 @@ export default function EnglishPrivacyPage() {
         OTPs, identity sessions, and stable participant identifiers.
       </p>
       <p>
-        Sent uses its managed sender and, together with WhatsApp/Meta, processes the number and
-        delivery data. Sent and Meta do not receive proposal text, votes, arguments, inclusion
-        receipts, or recovery secrets. During beta the issuer does not yet have an independent
-        operator, so Kuvend does not claim that maintainers technically cannot see the number.
+        Sent uses its managed sender to deliver through WhatsApp or, only after the participant
+        selects the backup, SMS. Sent, WhatsApp/Meta or the mobile carrier process the number and
+        delivery data. They do not receive proposal text, votes, arguments, inclusion receipts, or
+        recovery secrets. During beta the issuer does not yet have an independent operator, so
+        Kuvend does not claim that maintainers technically cannot see the number.
       </p>
 
       <h2>3. Data, purposes, and proposed legal basis</h2>
@@ -99,11 +100,11 @@ export default function EnglishPrivacyPage() {
       <h2>6. Recipients and transfers</h2>
       <p>
         Railway supplies application infrastructure and separated databases; Cloudflare supplies
-        DNS, protection, and delivery; Sent and Meta/WhatsApp are intended only for code delivery;
-        OpenRouter and the selected model provider are used only when a user requests optional
-        grammar and spelling assistance. The request is limited to the selected draft and requires
-        zero-data-retention routing. Kuvend does not sell data, show advertising, or load behavioral
-        analytics or tracking SDKs in the browser.
+        DNS, protection, and delivery; Sent, Meta/WhatsApp and the mobile carrier are intended only
+        for code delivery through the selected channel; OpenRouter and the selected model provider
+        are used only when a user requests optional grammar and spelling assistance. The request is
+        limited to the selected draft and requires zero-data-retention routing. Kuvend does not sell
+        data, show advertising, or load behavioral analytics or tracking SDKs in the browser.
       </p>
       <p>
         Some processors are outside Albania. Before real verification, Revido LLC must complete

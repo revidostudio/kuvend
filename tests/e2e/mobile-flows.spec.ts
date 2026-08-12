@@ -259,16 +259,51 @@ function mobileOnly(width: number | undefined) {
 }
 
 async function completeOtp(page: Page) {
-  await expect(page.getByRole("heading", { name: "Verifiko me WhatsApp" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Verifiko numrin" })).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Shteti dhe kodi telefonik" })).toHaveValue(
     "🇦🇱 Shqipëri (+355)",
   );
-  await page.getByLabel("Numri i WhatsApp").fill("069 123 4567");
+  await page.getByLabel("Numri i telefonit").fill("069 123 4567");
   await page.getByRole("button", { name: "Dërgo kodin në WhatsApp" }).click();
   await expect(page.getByText("Kontrollo WhatsApp")).toBeVisible();
   await page.getByLabel("Kodi gjashtëshifror").fill("123456");
   await page.getByRole("button", { name: "Verifiko dhe vazhdo" }).click();
 }
+
+test("WhatsApp failure offers an explicit SMS fallback", async ({ page }, testInfo) => {
+  mobileOnly(testInfo.project.use.viewport?.width);
+  const deliveryChannels: string[] = [];
+  await page.route("**/v1/otp/start", async (route) => {
+    const payload = route.request().postDataJSON() as { deliveryChannel?: string };
+    deliveryChannels.push(payload.deliveryChannel ?? "whatsapp");
+    if (payload.deliveryChannel === "sms") {
+      return route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          challengeId: "sms-challenge",
+          otpProvider: "sentdm",
+          deliveryChannel: "sms",
+        }),
+      });
+    }
+    return route.fulfill({
+      status: 400,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "verification_unavailable" }),
+    });
+  });
+
+  await page.goto("/");
+  await page.locator(".proposal-card").first().click();
+  await page.getByRole("button", { name: "Mbështes" }).click();
+  await page.getByLabel(/Numri i telefonit/).fill("069 123 4567");
+  await page.getByRole("button", { name: "Dërgo kodin në WhatsApp" }).click();
+  await expect(page.getByText("Kodi nuk mund të dërgohej në WhatsApp")).toBeVisible();
+  await page.getByRole("button", { name: "Dërgo kodin me SMS" }).click();
+  await expect(page.getByText("Kontrollo mesazhet SMS")).toBeVisible();
+  expect(deliveryChannels).toEqual(["whatsapp", "sms"]);
+});
 
 test("OTP outage is identified as a service problem rather than an invalid phone", async ({
   page,
@@ -284,7 +319,7 @@ test("OTP outage is identified as a service problem rather than an invalid phone
   await page.goto("/");
   await page.locator(".proposal-card").first().click();
   await page.getByRole("button", { name: "Mbështes" }).click();
-  await page.getByLabel("Numri i WhatsApp").fill("069 123 4567");
+  await page.getByLabel("Numri i telefonit").fill("069 123 4567");
   await page.getByRole("button", { name: "Dërgo kodin në WhatsApp" }).click();
 
   await expect(
@@ -320,12 +355,13 @@ test("OTP delivery rejection keeps the selected country and allows correction", 
   await page.getByRole("button", { name: "Kërko ose ndrysho shtetin" }).click();
   await country.fill("Bashkuara");
   await page.getByRole("option", { name: /Shtetet e Bashkuara.*\+1/ }).click();
-  await page.getByLabel("Numri i WhatsApp").fill("202 555 0147");
+  await page.getByLabel("Numri i telefonit").fill("202 555 0147");
   await page.getByRole("button", { name: "Dërgo kodin në WhatsApp" }).click();
 
-  await expect(page.getByText(/WhatsApp nuk mund ta marrë kodin tani/)).toBeVisible();
+  await expect(page.getByText(/Kodi nuk mund të dërgohej në WhatsApp/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Dërgo kodin me SMS" })).toBeVisible();
   await expect(country).toHaveValue(/Shtetet e Bashkuara.*\(\+1\)/);
-  await page.getByLabel("Numri i WhatsApp").fill("202 555 0188");
+  await page.getByLabel("Numri i telefonit").fill("202 555 0188");
   await page.getByRole("button", { name: "Dërgo kodin në WhatsApp" }).click();
 
   await expect(page.getByText("Kontrollo WhatsApp")).toBeVisible();

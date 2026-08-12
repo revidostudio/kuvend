@@ -26,9 +26,9 @@ The launch gate requires an independent issuer operator, independent cryptograph
 
 ## OTP provider selection
 
-The issuer uses an `OTP_PROVIDER` adapter. `development` is local-only. Sent is the only real-delivery provider: production uses `OTP_PROVIDER=sentdm` for WhatsApp OTP and requires `SENTDM_API_KEY`, `SENTDM_TEMPLATE_ID`, and `SENTDM_OTP_KEY` only inside the issuer trust domain. Prelude is not supported.
+The issuer uses an `OTP_PROVIDER` adapter. `development` is local-only. Sent is the only real-delivery provider: production uses `OTP_PROVIDER=sentdm` for WhatsApp-first OTP with an explicit user-selected SMS backup and requires `SENTDM_API_KEY`, `SENTDM_TEMPLATE_ID`, and `SENTDM_OTP_KEY` only inside the issuer trust domain. Prelude is not supported.
 
-The Sent adapter generates a six-digit code inside the isolated issuer and sends only the E.164 phone number, approved template ID, code and the explicit `whatsapp` channel to Sent. It does not send civic identifiers, proposal or voting-round identifiers, IP/device signals, frontend dispatch identifiers, names or cross-service correlation IDs. It does not register a webhook or retain Sent message IDs. The client repeats the phone number during the code check so the issuer stores only a rotating keyed phone digest and HMAC of the short-lived OTP between requests; plaintext phone numbers and OTPs are not placed in challenge state, logs, databases or backups.
+The Sent adapter generates a six-digit code inside the isolated issuer. WhatsApp sends contain only the E.164 phone number, approved template ID, code and explicit `whatsapp` channel. If that attempt fails, the browser may offer an explicit SMS action; the SMS send contains only the E.164 number, OTP text and explicit `sms` channel. It does not send civic identifiers, proposal or voting-round identifiers, IP/device signals, frontend dispatch identifiers, names or cross-service correlation IDs. It does not register a webhook or retain Sent message IDs. The client repeats the phone number during the code check so the issuer stores only a rotating keyed phone digest and HMAC of the short-lived OTP between requests; plaintext phone numbers and OTPs are not placed in challenge state, logs, databases or backups.
 
 The current approved authentication template declares its one-time-code variable as `var_1`; production must therefore set `SENTDM_CODE_PARAMETER=var_1`. A different template may use another variable name only after its published Sent schema is checked and the corresponding provider contract test is updated.
 
@@ -39,14 +39,14 @@ Before enabling `OTP_PROVIDER=sentdm`:
 3. configure country allowlists, spend caps, retry delays and conservative fraud rules;
 4. verify sender presentation and Albanian delivery on both ONE Albania and Vodafone Albania;
 5. publish the temporary operator limitation and label the service an experimental beta;
-6. verify that the approved template accepts the configured `SENTDM_CODE_PARAMETER` and sends through WhatsApp only;
+6. verify that the approved template accepts the configured `SENTDM_CODE_PARAMETER`, WhatsApp remains the first attempt, and SMS is sent only after explicit selection;
 7. retain an operational provider fallback through the adapter boundary rather than coupling the civic API to Sent.
 
 The Albania trial records only aggregates by provider, carrier and test cohort: delivery within 10/30/60 seconds, completion rate, false blocks, messages per completion and cost per completion. It uses consenting test participants and never joins results to proposals or votes.
 
 ## Configuration invariants
 
-- Use `OTP_PROVIDER=sentdm` only with the documented WhatsApp verification configuration.
+- Use `OTP_PROVIDER=sentdm` only with the documented WhatsApp-first and explicit SMS-backup configuration.
 - Use independent values for `ISSUER_DIGEST_KEY`, `ISSUER_MEMBERSHIP_PRIVATE_KEY_B64`, `TRANSPARENCY_SIGNING_KEY`, `ADMIN_API_KEY`, and `NOTIFICATION_ENCRYPTION_KEY`.
 - Configure stable VAPID keys; the notification service refuses to start in production without them.
 - Set `SOURCE_REVISION` to the deployed Git commit and rotate `TRANSPARENCY_KEY_EPOCH` with its signing key.

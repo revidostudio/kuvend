@@ -121,7 +121,7 @@ export function buildApp(
     }
     let verificationState: string | undefined;
     try {
-      const startResult = await provider.start(parsed.data.phone);
+      const startResult = await provider.start(parsed.data.phone, parsed.data.deliveryChannel);
       verificationState = startResult?.verificationState;
     } catch (error) {
       if (error instanceof OtpProviderError) {
@@ -143,6 +143,7 @@ export function buildApp(
       expiresInSeconds: 300,
       ...(provider.id === "development" ? { developmentCode: "123456" } : {}),
       otpProvider: provider.id,
+      deliveryChannel: parsed.data.deliveryChannel,
       credentialProtocol: "semaphore-v4",
     });
   });
@@ -202,7 +203,7 @@ export function buildApp(
       otpProvider: provider.id,
       privacyNotice:
         provider.id === "sentdm"
-          ? "Shërbimet e propozimeve dhe votimit të Kuvend nuk marrin numrin tuaj. Sent e dërgon kodin nga dërguesi i vet; shërbimi i izoluar, Sent dhe WhatsApp (Meta) e përpunojnë numrin vetëm për këtë dërgesë."
+          ? "Shërbimet e propozimeve dhe votimit të Kuvend nuk marrin numrin tuaj. Sent e dërgon kodin me WhatsApp ose SMS; shërbimi i izoluar, Sent dhe ofruesi i kanalit të zgjedhur e përpunojnë numrin vetëm për këtë dërgesë."
           : "Shërbimet e propozimeve dhe votimit të Kuvend nuk marrin numrin tuaj. Në këtë beta, shërbimi i izoluar i verifikimit i Kuvend e përpunon përkohësisht.",
     };
   });

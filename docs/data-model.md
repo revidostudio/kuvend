@@ -10,7 +10,7 @@ It must reject phone numbers, OTP codes, identity sessions, issuer session IDs, 
 
 ## Issuer database
 
-The issuer stores an opaque challenge ID, a keyed phone digest, an HMAC of the short-lived OTP, expiry and attempt count. Expired challenges are pruned. Plaintext numbers exist only in request memory and at Sent/WhatsApp for delivery. They are not written to application logs or backups. Key epochs and aggregate issuance controls remain part of the reviewed production protocol gate.
+The issuer stores an opaque challenge ID, a keyed phone digest, an HMAC of the short-lived OTP, expiry and attempt count. Expired challenges are pruned. Plaintext numbers exist only in request memory and at Sent plus WhatsApp/Meta or the mobile carrier for the selected delivery. They are not written to application logs or backups. Key epochs and aggregate issuance controls remain part of the reviewed production protocol gate.
 
 The issuer signs Semaphore membership roots; independent review is still required to validate the complete integration and operating model.
 

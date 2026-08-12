@@ -143,6 +143,7 @@ export const otpStartSchema = z
       .trim()
       .regex(/^\+[1-9]\d{7,14}$/),
     identityCommitment: numericStringSchema,
+    deliveryChannel: z.enum(["whatsapp", "sms"]).default("whatsapp"),
   })
   .strict();
 
