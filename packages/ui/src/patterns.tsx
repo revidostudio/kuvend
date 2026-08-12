@@ -53,6 +53,12 @@ export type PhoneCountryOption = {
   callingCode: string;
 };
 
+function countryFlag(countryCode: string) {
+  return /^[A-Z]{2}$/.test(countryCode)
+    ? String.fromCodePoint(...[...countryCode].map((letter) => 127397 + letter.charCodeAt(0)))
+    : "";
+}
+
 export function PhoneNumberField({
   countries,
   country,
@@ -73,9 +79,11 @@ export function PhoneNumberField({
         items={countries}
         value={country}
         itemToStringLabel={(option: PhoneCountryOption) =>
-          `${option.label} (+${option.callingCode})`
+          `${countryFlag(option.value)} ${option.label} (+${option.callingCode})`.trim()
         }
-        itemToStringValue={(option: PhoneCountryOption) => option.value}
+        itemToStringValue={(option: PhoneCountryOption) =>
+          `${option.label} +${option.callingCode} ${option.value}`
+        }
         onValueChange={(option) => {
           if (option) onCountryChange(option);
         }}
@@ -96,16 +104,25 @@ export function PhoneNumberField({
             <ComboboxPopup className="min-w-72">
               <ComboboxEmpty>Nuk u gjet asnjë shtet.</ComboboxEmpty>
               <ComboboxList>
-                {(option: PhoneCountryOption) => (
-                  <ComboboxItem key={option.value} value={option}>
+                {countries.map((option) => (
+                  <ComboboxItem
+                    key={option.value}
+                    value={option}
+                    aria-label={`${option.label} +${option.callingCode}`}
+                  >
                     <span className="flex w-full min-w-0 items-center justify-between gap-3">
-                      <span className="truncate">{option.label}</span>
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span aria-hidden="true" className="shrink-0 text-base leading-none">
+                          {countryFlag(option.value)}
+                        </span>
+                        <span className="truncate">{option.label}</span>
+                      </span>
                       <span className="shrink-0 text-[var(--kuvend-ink-soft)]">
                         +{option.callingCode}
                       </span>
                     </span>
                   </ComboboxItem>
-                )}
+                ))}
               </ComboboxList>
             </ComboboxPopup>
           </ComboboxPositioner>
