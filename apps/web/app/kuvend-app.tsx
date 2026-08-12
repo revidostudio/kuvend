@@ -213,7 +213,6 @@ export function KuvendApp({
   const [afterOtp, setAfterOtp] = useState<"proposal" | "argument" | "vote" | null>(null);
   const [authorCapability, setAuthorCapability] = useState("");
   const [displayNow, setDisplayNow] = useState<number | null>(null);
-  const [mobileProposalToolsVisible, setMobileProposalToolsVisible] = useState(false);
 
   useEffect(() => {
     setDisplayNow(Date.now());
@@ -242,22 +241,6 @@ export function KuvendApp({
       )
       .catch(() => undefined);
   }, []);
-
-  useEffect(() => {
-    if (selectedId || !window.matchMedia("(max-width: 639px)").matches) {
-      setMobileProposalToolsVisible(false);
-      return;
-    }
-
-    const proposalArea = document.querySelector(".proposal-area");
-    if (!proposalArea) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setMobileProposalToolsVisible(Boolean(entry?.isIntersecting)),
-      { threshold: 0.02 },
-    );
-    observer.observe(proposalArea);
-    return () => observer.disconnect();
-  }, [proposals.length, selectedId]);
 
   useEffect(() => {
     const syncLocation = () => {
@@ -967,7 +950,7 @@ export function KuvendApp({
               </div>
             </article>
           </div>
-          {mobileProposalToolsVisible && (
+          {!selectedId && (
             <div className="mobile-filter-bar" role="group" aria-label="Statuset kryesore">
               <Button
                 variant="ghost"
