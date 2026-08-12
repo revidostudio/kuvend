@@ -2,7 +2,7 @@
 
 ## Current status
 
-Kuvend is a synthetic reference system and must not be used for sensitive or production participation. No security bounty or guaranteed response time exists yet.
+Kuvend is an experimental public beta. Its Semaphore integration and operating separation have not yet completed independent review. No security bounty or guaranteed response time exists yet.
 
 ## Reporting
 

@@ -18,9 +18,9 @@ export default function PrivacyPage() {
       alternate={{ href: "/en/privacy", label: "Read this policy in English" }}
     >
       <aside className="trust-status" aria-label="Statusi i politikës">
-        <strong>Draft për shqyrtim ligjor.</strong> Kjo politikë përshkruan beta-n sintetike dhe
-        arkitekturën e planifikuar. Verifikimi real me WhatsApp nuk aktivizohet derisa vlerësimi i
-        ndikimit, marrëveshjet me përpunuesit dhe shqyrtimi ligjor të jenë miratuar.
+        <strong>Beta eksperimentale.</strong> Kjo politikë përshkruan verifikimin aktiv me WhatsApp,
+        anëtarësinë anonime me Semaphore dhe kufijtë aktualë të shërbimit. Vlerësimi i ndikimit,
+        marrëveshjet me përpunuesit dhe shqyrtimi i pavarur publikohen sapo përfundojnë.
       </aside>
 
       <h2>1. Kush është përgjegjës</h2>
@@ -38,16 +38,17 @@ export default function PrivacyPage() {
       <h2 id="si-mbrohet-vota">Si mbrohet vota pa emër</h2>
       <p>
         Shërbimi i izoluar i verifikimit merr përkohësisht numrin, kërkon kodin njëpërdorimësh dhe
-        lëshon një kredencial anonim. Shërbimi qytetar merr vetëm provën kriptografike dhe një
-        shenjë unike për veprimin ose propozimin. Skema e tij refuzon numra telefoni, OTP, sesione
-        identiteti dhe identifikues të qëndrueshëm të pjesëmarrësit.
+        regjistron vetëm angazhimin publik të identitetit të krijuar në pajisje. Shërbimi qytetar
+        merr vetëm provën kriptografike dhe një shenjë unike për veprimin ose propozimin. Skema e
+        tij refuzon numra telefoni, OTP, sesione identiteti dhe identifikues të qëndrueshëm të
+        pjesëmarrësit.
       </p>
       <p>
-        Në një provë reale me WhatsApp, Sent përdor dërguesin e vet të menaxhuar dhe, bashkë me
-        WhatsApp/Meta, përpunon numrin dhe të dhënat e dërgesës. Sent dhe Meta nuk marrin tekstin e
-        propozimit, votën, argumentet, mandatet e përfshirjes ose sekretet e rikuperimit. Gjatë
-        beta-s, operatori i shërbimit të verifikimit nuk është ende i pavarur; prandaj Kuvend nuk
-        pretendon se mirëmbajtësit teknikisht nuk mund ta shohin numrin.
+        Sent përdor dërguesin e vet të menaxhuar dhe, bashkë me WhatsApp/Meta, përpunon numrin dhe
+        të dhënat e dërgesës. Sent dhe Meta nuk marrin tekstin e propozimit, votën, argumentet,
+        mandatet e përfshirjes ose sekretet e rikuperimit. Operatori i shërbimit të verifikimit nuk
+        është ende i pavarur; prandaj Kuvend nuk pretendon se mirëmbajtësit teknikisht nuk mund ta
+        shohin numrin.
       </p>
 
       <h2>3. Të dhënat, qëllimet dhe baza e propozuar</h2>
@@ -77,8 +78,8 @@ export default function PrivacyPage() {
       <p>
         Bazat ligjore të propozuara janë kryerja e shërbimit të kërkuar nga përdoruesi, interesat
         legjitime për siguri dhe integritet, pëlqimi për njoftimet dhe emrin vullnetar, dhe
-        detyrimet ligjore kur zbatohen. Vlerësimi përfundimtar i bazës ligjore është pjesë e
-        shqyrtimit ligjor dhe DPIA-së para përpunimit real.
+        detyrimet ligjore kur zbatohen. Baza ligjore dhe DPIA-ja rishikohen gjatë beta-s dhe çdo
+        ndryshim material publikohet këtu.
       </p>
 
       <h2>4. Çfarë nuk provon OTP-ja</h2>
@@ -100,14 +101,14 @@ export default function PrivacyPage() {
       <h2>6. Marrësit dhe transferimet</h2>
       <p>
         Railway ofron infrastrukturën e aplikacionit dhe bazat e ndara; Cloudflare ofron DNS,
-        mbrojtje dhe shpërndarje; Sent dhe Meta/WhatsApp do të përdoren vetëm për dërgimin e kodit;
-        një ofrues AI përdoret vetëm kur përdoruesi kërkon ndihmë opsionale. Kuvend nuk shet të
-        dhëna, nuk shfaq reklama dhe nuk ngarkon SDK analitike ose gjurmimi në shfletues.
+        mbrojtje dhe shpërndarje; Sent dhe Meta/WhatsApp përdoren vetëm për dërgimin e kodit; një
+        ofrues AI përdoret vetëm kur përdoruesi kërkon ndihmë opsionale. Kuvend nuk shet të dhëna,
+        nuk shfaq reklama dhe nuk ngarkon SDK analitike ose gjurmimi në shfletues.
       </p>
       <p>
-        Disa përpunues janë jashtë Shqipërisë. Para verifikimit real, Revido LLC duhet të përfundojë
-        marrëveshjet e përpunimit, listën e nën-përpunuesve dhe mekanizmin e ligjshëm të
-        transferimit, përfshirë klauzolat standarde kur kërkohen. Shih{" "}
+        Disa përpunues janë jashtë Shqipërisë. Revido LLC dokumenton marrëveshjet e përpunimit,
+        listën e nën-përpunuesve dhe mekanizmin e ligjshëm të transferimit, përfshirë klauzolat
+        standarde kur kërkohen. Shih{" "}
         <a href="https://www.sent.dm/legal/data-processing-addendum" rel="external noreferrer">
           marrëveshjen e përpunimit të Sent
         </a>{" "}

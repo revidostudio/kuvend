@@ -14,7 +14,6 @@ import type {
   WithdrawProposalInput,
 } from "@kuvend/contracts";
 import type { CivicStore, VoteRecord } from "./store.js";
-import { seedProposals } from "./seed.js";
 
 const pseudonyms = ["Lisi i Qetë", "Ura e Hapur", "Drita e Mëngjesit", "Guri i Bardhë"];
 
@@ -41,6 +40,7 @@ export class PostgresCivicStore implements CivicStore {
         pseudonym text not null,
         public_author_name text,
         author_capability_hash text,
+        submission_nullifier text unique,
         status text not null,
         revision_number integer not null default 1,
         duplicate_of uuid,
@@ -128,6 +128,7 @@ export class PostgresCivicStore implements CivicStore {
       alter table arguments add column if not exists evidence jsonb not null default '[]';
       alter table arguments add column if not exists public_author_name text;
       alter table proposals add column if not exists author_capability_hash text;
+      alter table proposals add column if not exists submission_nullifier text;
       alter table arguments add column if not exists contribution_nullifier text;
       alter table proposals add column if not exists revision_number integer not null default 1;
       alter table proposals add column if not exists duplicate_of uuid;
@@ -137,67 +138,9 @@ export class PostgresCivicStore implements CivicStore {
       alter table moderation_cases add column if not exists decision_duplicate_of uuid;
       create unique index if not exists arguments_contribution_nullifier_idx
         on arguments (contribution_nullifier) where contribution_nullifier is not null;
+      create unique index if not exists proposals_submission_nullifier_idx
+        on proposals (submission_nullifier) where submission_nullifier is not null;
     `);
-
-    const countRow = (
-      await this.sql<{ count: number }[]>`select count(*)::int as count from proposals`
-    )[0];
-    if ((countRow?.count ?? 0) === 0) {
-      for (const proposal of seedProposals) await this.insertSeed(proposal);
-    }
-  }
-
-  private async insertSeed(proposal: ProposalRecord): Promise<void> {
-    await this.sql`
-      insert into proposals ${this.sql({
-        id: proposal.id,
-        title: proposal.title,
-        summary: proposal.summary,
-        problem: proposal.problem,
-        proposed_change: proposal.proposedChange,
-        scope: proposal.scope,
-        location: proposal.location ?? null,
-        category: proposal.category,
-        evidence: this.sql.json(proposal.evidence),
-        pseudonym: proposal.pseudonym,
-        public_author_name: proposal.publicAuthorName ?? null,
-        status: proposal.status,
-      })}
-    `;
-    if (proposal.votingRound) {
-      const support = Math.round(proposal.votingRound.turnout * 0.64);
-      await this.sql`
-        insert into voting_rounds ${this.sql({
-          id: proposal.votingRound.id,
-          proposal_id: proposal.id,
-          opens_at: proposal.votingRound.opensAt,
-          closes_at: proposal.votingRound.closesAt,
-          seeded_turnout: proposal.votingRound.turnout,
-          seeded_support: support,
-        })}
-      `;
-    }
-    for (const argument of proposal.arguments) {
-      await this.sql`insert into arguments ${this.sql({
-        id: argument.id,
-        proposal_id: proposal.id,
-        position: argument.position,
-        body: argument.body,
-        evidence: this.sql.json(argument.evidence),
-        pseudonym: argument.pseudonym,
-        public_author_name: argument.publicAuthorName ?? null,
-        created_at: argument.createdAt,
-      })}`;
-    }
-    for (const event of proposal.statusHistory) {
-      await this.sql`insert into status_events ${this.sql({
-        id: randomUUID(),
-        proposal_id: proposal.id,
-        status: event.status,
-        note: event.note,
-        event_day: event.at.slice(0, 10),
-      })}`;
-    }
   }
 
   async list(): Promise<ProposalRecord[]> {
@@ -273,7 +216,7 @@ export class PostgresCivicStore implements CivicStore {
               id: String(votingRound.id),
               opensAt: new Date(String(votingRound.opens_at)).toISOString(),
               closesAt: new Date(String(votingRound.closes_at)).toISOString(),
-              turnout: Number(votingRound.seeded_turnout) + Number(count.votes),
+              turnout: Number(count.votes),
             },
           }
         : {}),
@@ -296,7 +239,7 @@ export class PostgresCivicStore implements CivicStore {
     };
   }
 
-  async create(input: CreateProposalInput) {
+  async create(input: CreateProposalInput & { submissionNullifier: string }) {
     const id = randomUUID();
     await this.sql`insert into proposals ${this.sql({
       id,
@@ -311,6 +254,7 @@ export class PostgresCivicStore implements CivicStore {
       pseudonym: pseudonyms[Math.floor(Math.random() * pseudonyms.length)] ?? "Fjala e Lirë",
       public_author_name: input.publicAuthorName ?? null,
       author_capability_hash: input.authorCapabilityHash,
+      submission_nullifier: input.submissionNullifier,
       status: "pending_review",
       revision_number: 1,
     })}`;
@@ -333,7 +277,9 @@ export class PostgresCivicStore implements CivicStore {
     return { proposal };
   }
 
-  async addArgument(input: CreateArgumentInput): Promise<ArgumentRecord> {
+  async addArgument(
+    input: CreateArgumentInput & { contributionNullifier: string },
+  ): Promise<ArgumentRecord> {
     const argument: ArgumentRecord = {
       id: randomUUID(),
       position: input.position,
@@ -378,8 +324,8 @@ export class PostgresCivicStore implements CivicStore {
       throw error;
     }
     const [result] = await this.sql`
-      select (r.seeded_turnout + count(b.*))::int as turnout,
-        (r.seeded_support + count(b.*) filter (where b.choice = 'support'))::int as support
+      select count(b.*)::int as turnout,
+        count(b.*) filter (where b.choice = 'support')::int as support
       from voting_rounds r left join ballots b on b.round_id = r.id
       where r.id = ${input.roundId} group by r.id
     `;
@@ -623,7 +569,7 @@ export class PostgresCivicStore implements CivicStore {
 
   async closeExpiredRounds(now = new Date()) {
     const rows = await this.sql`
-      select p.id, r.id as round_id, r.seeded_turnout, r.seeded_support,
+      select p.id, r.id as round_id,
         count(b.*)::int as votes,
         count(b.*) filter (where b.choice = 'support')::int as support_votes
       from proposals p join voting_rounds r on r.proposal_id = p.id
@@ -632,8 +578,8 @@ export class PostgresCivicStore implements CivicStore {
       group by p.id, r.id
     `;
     for (const row of rows) {
-      const turnout = Number(row.seeded_turnout) + Number(row.votes);
-      const support = Number(row.seeded_support) + Number(row.support_votes);
+      const turnout = Number(row.votes);
+      const support = Number(row.support_votes);
       await this.sql.begin(async (sql) => {
         await sql`insert into closed_results ${sql({
           proposal_id: row.id,

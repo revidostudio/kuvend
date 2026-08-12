@@ -8,6 +8,12 @@ import {
   type VoteChoice,
 } from "@kuvend/contracts";
 import {
+  actionScope,
+  voteMessage,
+  type BrowserCredential,
+  type MembershipSnapshot,
+} from "@kuvend/credential/anonymous";
+import {
   Alert,
   AlertDescription,
   AlertTitle,
@@ -93,11 +99,10 @@ import {
   saveDisplayPreference,
   type DisplayPreference,
 } from "../features/kuvend/display-preference";
-import { fallbackProposals } from "../features/kuvend/fallback-data";
 import { extractProposalId, proposalPath } from "./proposal-url";
 import { countryLabel, internationalPhone, phoneCountries } from "../features/kuvend/phone-number";
 
-const civicUrl = process.env.NEXT_PUBLIC_CIVIC_API_URL ?? "";
+const civicUrl = process.env.NEXT_PUBLIC_CIVIC_API_URL ?? "http://localhost:4000";
 const issuerUrl = process.env.NEXT_PUBLIC_ISSUER_URL ?? "http://localhost:4001";
 const assistantUrl = process.env.NEXT_PUBLIC_ASSISTANT_URL ?? "http://localhost:4002";
 const notificationsUrl = process.env.NEXT_PUBLIC_NOTIFICATIONS_URL ?? "http://localhost:4004";
@@ -115,8 +120,6 @@ const countryOptions = phoneCountries.map((option) => ({
   value: option.country,
   label: `${option.label} (+${option.callingCode})`,
 }));
-
-export const fallback = fallbackProposals;
 
 type Dialog =
   | "proposal"
@@ -151,6 +154,30 @@ async function sha256(value: string) {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+function readCredential(): BrowserCredential | null {
+  try {
+    const value = JSON.parse(
+      localStorage.getItem("kuvend.credential.v2") ?? "null",
+    ) as BrowserCredential | null;
+    return value?.protocol === "semaphore-v4" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+async function proofFor(credential: BrowserCredential, message: string, action: string) {
+  let current = credential;
+  if (new Date(current.snapshot.expiresAt).getTime() < Date.now() + 30_000) {
+    const response = await fetch(`${issuerUrl}/v1/membership`, { cache: "no-store" });
+    if (!response.ok) throw new Error("membership_not_ready");
+    const { snapshot } = (await response.json()) as { snapshot: MembershipSnapshot };
+    current = { ...current, snapshot };
+    localStorage.setItem("kuvend.credential.v2", JSON.stringify(current));
+  }
+  const { generateAnonymousProof } = await import("@kuvend/credential/browser");
+  return generateAnonymousProof(current, message, await actionScope(action));
+}
+
 function formatDate(value: string) {
   const date = new Date(value);
   const day = String(date.getUTCDate()).padStart(2, "0");
@@ -166,9 +193,7 @@ export function KuvendApp({
   initialProposal?: ProposalRecord;
 }) {
   const [proposals, setProposals] = useState<ProposalRecord[]>(() =>
-    initialProposal
-      ? [initialProposal, ...fallback.filter((proposal) => proposal.id !== initialProposal.id)]
-      : fallback,
+    initialProposal ? [initialProposal] : [],
   );
   const [selectedId, setSelectedId] = useState(initialSelectedId ?? "");
   const [query, setQuery] = useState("");
@@ -182,21 +207,16 @@ export function KuvendApp({
   );
   const [receipt, setReceipt] = useState("");
   const [recoverySecret, setRecoverySecret] = useState("");
-  const [credential, setCredential] = useState("");
+  const [credential, setCredential] = useState<BrowserCredential | null>(null);
   const [participationOpen, setParticipationOpen] = useState<boolean | null>(null);
   const [notice, setNotice] = useState("");
   const [afterOtp, setAfterOtp] = useState<"proposal" | "argument" | "vote" | null>(null);
   const [authorCapability, setAuthorCapability] = useState("");
   const [displayNow, setDisplayNow] = useState<number | null>(null);
-  const [mobileProposalToolsVisible, setMobileProposalToolsVisible] = useState(false);
 
   useEffect(() => {
     setDisplayNow(Date.now());
-    const storedCredential =
-      localStorage.getItem("kuvend.credential.v1") ??
-      localStorage.getItem("kuvend.syntheticCredential.v1") ??
-      "";
-    if (storedCredential) localStorage.setItem("kuvend.credential.v1", storedCredential);
+    const storedCredential = readCredential();
     setCredential(storedCredential);
     fetch(`${issuerUrl}/health`, { cache: "no-store" })
       .then((response) => (response.ok ? response.json() : Promise.reject()))
@@ -204,16 +224,14 @@ export function KuvendApp({
         const available = data.participationOpen === true;
         setParticipationOpen(available);
         if (!available) {
-          localStorage.removeItem("kuvend.credential.v1");
-          localStorage.removeItem("kuvend.syntheticCredential.v1");
-          setCredential("");
+          localStorage.removeItem("kuvend.credential.v2");
+          setCredential(null);
         }
       })
       .catch(() => {
         setParticipationOpen(false);
-        localStorage.removeItem("kuvend.credential.v1");
-        localStorage.removeItem("kuvend.syntheticCredential.v1");
-        setCredential("");
+        localStorage.removeItem("kuvend.credential.v2");
+        setCredential(null);
       });
     if (!civicUrl) return;
     fetch(`${civicUrl}/v1/proposals`)
@@ -223,22 +241,6 @@ export function KuvendApp({
       )
       .catch(() => undefined);
   }, []);
-
-  useEffect(() => {
-    if (selectedId || !window.matchMedia("(max-width: 639px)").matches) {
-      setMobileProposalToolsVisible(false);
-      return;
-    }
-
-    const proposalArea = document.querySelector(".proposal-area");
-    if (!proposalArea) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setMobileProposalToolsVisible(Boolean(entry?.isIntersecting)),
-      { threshold: 0.02 },
-    );
-    observer.observe(proposalArea);
-    return () => observer.disconnect();
-  }, [selectedId]);
 
   useEffect(() => {
     const syncLocation = () => {
@@ -282,23 +284,82 @@ export function KuvendApp({
     visible.find((proposal) => proposal.id === selectedId) ??
     visible[0] ??
     proposals.find((proposal) => proposal.id === selectedId) ??
-    proposals[0]!;
+    proposals[0];
   const voted = Boolean(result);
 
   useEffect(() => {
+    if (!selected) return;
     setAuthorCapability(localStorage.getItem(`kuvend.capability.${selected.id}`) ?? "");
     setReceipt(localStorage.getItem(`kuvend.receipt.${selected.id}`) ?? "");
     setResult(null);
     setPendingVote(null);
     setHistoryExpanded(false);
-  }, [selected.id]);
+  }, [selected?.id]);
 
   const visibleHistory = historyExpanded
-    ? selected.statusHistory
-    : selected.statusHistory.slice(-4);
-  const hiddenHistoryCount = selected.statusHistory.length - visibleHistory.length;
-  const argumentsFor = selected.arguments.filter((argument) => argument.position === "for");
-  const argumentsAgainst = selected.arguments.filter((argument) => argument.position === "against");
+    ? (selected?.statusHistory ?? [])
+    : (selected?.statusHistory.slice(-4) ?? []);
+  const hiddenHistoryCount = (selected?.statusHistory.length ?? 0) - visibleHistory.length;
+  const argumentsFor = selected?.arguments.filter((argument) => argument.position === "for") ?? [];
+  const argumentsAgainst =
+    selected?.arguments.filter((argument) => argument.position === "against") ?? [];
+
+  if (!selected) {
+    return (
+      <div className="site-shell proposal-index">
+        <PublicSiteHeader
+          active="proposals"
+          onNotifications={() => setDialog("notification")}
+          onPropose={() => setDialog("proposal")}
+        />
+        <main className="empty-catalogue">
+          <span className="eyebrow">Kuvend sapo u hap</span>
+          <h1>Propozimi i parë mund të jetë i yti.</h1>
+          <p>
+            Nuk ka ende propozime publike. Dorëzo një ide; pas kontrollit të moderimit ajo hapet për
+            argumente dhe votim këshillues.
+          </p>
+          <Button size="lg" onClick={() => setDialog("proposal")}>
+            <Plus /> Bëj një propozim
+          </Button>
+        </main>
+        <PublicSiteFooter />
+        {dialog === "proposal" && (
+          <ProposalDialog
+            credential={credential}
+            onNeedCredential={(draft) => {
+              sessionStorage.setItem("kuvend.pendingDraft.v1", JSON.stringify(draft));
+              setAfterOtp("proposal");
+              setDialog("otp");
+            }}
+            onClose={() => setDialog(null)}
+            onCreated={(proposal, secret) => {
+              setProposals([proposal]);
+              setSelectedId(proposal.id);
+              setRecoverySecret(secret);
+              setDialog("recovery");
+            }}
+          />
+        )}
+        {dialog === "otp" && (
+          <OtpDialog
+            onClose={() => setDialog(null)}
+            onVerified={(value) => {
+              localStorage.setItem("kuvend.credential.v2", JSON.stringify(value));
+              setCredential(value);
+              setDialog(afterOtp === "proposal" ? "proposal" : null);
+              setAfterOtp(null);
+            }}
+          />
+        )}
+        {dialog === "recovery" && (
+          <RecoveryDialog secret={recoverySecret} onClose={() => setDialog(null)} />
+        )}
+        {dialog === "notification" && <NotificationDialog onClose={() => setDialog(null)} />}
+      </div>
+    );
+  }
+  const activeProposal = selected;
 
   function beginVote(choice: VoteChoice) {
     if (participationOpen !== true) {
@@ -354,28 +415,35 @@ export function KuvendApp({
   }
 
   async function castVote(activeCredential = credential) {
-    if (!pendingVote || !selected.votingRound) return;
-    const holder = localStorage.getItem("kuvend.holderSecret.v1") ?? crypto.randomUUID();
-    localStorage.setItem("kuvend.holderSecret.v1", holder);
-    const nullifier = await sha256(`${holder}:${selected.votingRound.id}`);
+    if (!pendingVote || !activeProposal.votingRound) return;
+    if (!activeCredential) return;
     const commitment = await sha256(`${crypto.randomUUID()}:${pendingVote}`);
+    let credentialProof;
+    try {
+      credentialProof = await proofFor(
+        activeCredential,
+        voteMessage(pendingVote),
+        `ballot:${activeProposal.votingRound.id}`,
+      );
+    } catch {
+      setNotice("Grupi anonim nuk është ende gati ose dëshmia ka skaduar. Provo përsëri pas pak.");
+      return;
+    }
     const response = await fetch(`${civicUrl}/v1/ballots`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        proposalId: selected.id,
-        roundId: selected.votingRound.id,
+        proposalId: activeProposal.id,
+        roundId: activeProposal.votingRound.id,
         choice: pendingVote,
-        credential: activeCredential,
-        nullifier,
+        credentialProof,
         receiptCommitment: commitment,
       }),
     });
     if (!response.ok) {
       if (response.status === 401 || response.status === 503) {
-        localStorage.removeItem("kuvend.credential.v1");
-        localStorage.removeItem("kuvend.syntheticCredential.v1");
-        setCredential("");
+        localStorage.removeItem("kuvend.credential.v2");
+        setCredential(null);
       }
       setNotice("Vota nuk u regjistrua. Mund të jetë votuar më parë nga kjo dëshmi.");
       return;
@@ -386,17 +454,17 @@ export function KuvendApp({
     };
     setResult(data.result);
     setReceipt(data.receipt);
-    localStorage.setItem(`kuvend.receipt.${selected.id}`, data.receipt);
+    localStorage.setItem(`kuvend.receipt.${activeProposal.id}`, data.receipt);
     setDialog("receipt");
     setNotice("");
   }
 
   async function shareProposal() {
-    const url = `${location.origin}${proposalPath(selected)}`;
+    const url = `${location.origin}${proposalPath(activeProposal)}`;
     if (navigator.share)
       await navigator.share({
-        title: selected.title,
-        text: `${selected.summary} — Votim këshillues në Kuvend`,
+        title: activeProposal.title,
+        text: `${activeProposal.summary} — Votim këshillues në Kuvend`,
         url,
       });
     else {
@@ -407,20 +475,20 @@ export function KuvendApp({
 
   function publicResearchProposal() {
     return {
-      title: selected.title,
-      problem: selected.problem,
-      proposedChange: selected.proposedChange,
-      scope: selected.scope === "national" ? "Kombëtar" : "Vendor",
-      ...(selected.location ? { location: selected.location } : {}),
-      category: categoryLabels[selected.category] ?? "Tjetër",
-      evidence: selected.evidence.map(({ type, url, title, publisher, publishedAt }) => ({
+      title: activeProposal.title,
+      problem: activeProposal.problem,
+      proposedChange: activeProposal.proposedChange,
+      scope: activeProposal.scope === "national" ? "Kombëtar" : "Vendor",
+      ...(activeProposal.location ? { location: activeProposal.location } : {}),
+      category: categoryLabels[activeProposal.category] ?? "Tjetër",
+      evidence: activeProposal.evidence.map(({ type, url, title, publisher, publishedAt }) => ({
         type,
         url,
         title,
         ...(publisher ? { publisher } : {}),
         ...(publishedAt ? { publishedAt } : {}),
       })),
-      canonicalUrl: `${location.origin}${proposalPath(selected)}`,
+      canonicalUrl: `${location.origin}${proposalPath(activeProposal)}`,
     };
   }
 
@@ -882,7 +950,7 @@ export function KuvendApp({
               </div>
             </article>
           </div>
-          {mobileProposalToolsVisible && (
+          {!selectedId && (
             <div className="mobile-filter-bar" role="group" aria-label="Statuset kryesore">
               <Button
                 variant="ghost"
@@ -1095,7 +1163,7 @@ export function KuvendApp({
         <OtpDialog
           onClose={() => setDialog(null)}
           onVerified={(value) => {
-            localStorage.setItem("kuvend.credential.v1", value);
+            localStorage.setItem("kuvend.credential.v2", JSON.stringify(value));
             setCredential(value);
             setDialog(
               afterOtp === "proposal" ? "proposal" : afterOtp === "argument" ? "argument" : null,
@@ -1208,16 +1276,16 @@ function OtpDialog({
   onVerified,
 }: {
   onClose: () => void;
-  onVerified: (credential: string) => void;
+  onVerified: (credential: BrowserCredential) => void;
 }) {
   const [country, setCountry] = useState<CountryCode>("AL");
   const [nationalNumber, setNationalNumber] = useState("");
   const [challengePhone, setChallengePhone] = useState("");
   const [challenge, setChallenge] = useState("");
   const [code, setCode] = useState("");
-  const [otpProvider, setOtpProvider] = useState<"synthetic" | "prelude" | "sentdm">("synthetic");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [identity, setIdentity] = useState<{ identity: string; commitment: string } | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -1232,7 +1300,38 @@ function OtpDialog({
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    void import("@kuvend/credential/browser").then(
+      ({ createBrowserIdentity, identityCommitment }) => {
+        if (!active) return;
+        const pendingIdentity = localStorage.getItem("kuvend.pendingIdentity.v1");
+        if (pendingIdentity) {
+          try {
+            setIdentity({
+              identity: pendingIdentity,
+              commitment: identityCommitment(pendingIdentity),
+            });
+            return;
+          } catch {
+            localStorage.removeItem("kuvend.pendingIdentity.v1");
+          }
+        }
+        const created = createBrowserIdentity();
+        localStorage.setItem("kuvend.pendingIdentity.v1", created.identity);
+        setIdentity(created);
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, []);
+
   async function start() {
+    if (!identity) {
+      setError("Po përgatisim dëshminë anonime. Provo përsëri pas një çasti.");
+      return;
+    }
     const phone = internationalPhone(country, nationalNumber);
     if (!phone) {
       setError("Kontrollo numrin. Zgjidh shtetin dhe shkruaj numrin pa kodin ndërkombëtar.");
@@ -1243,7 +1342,7 @@ function OtpDialog({
       const response = await fetch(`${issuerUrl}/v1/otp/start`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ phone, identityCommitment: identity.commitment }),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -1258,13 +1357,6 @@ function OtpDialog({
       }
       setChallenge(data.challengeId);
       setChallengePhone(phone);
-      setOtpProvider(
-        data.otpProvider === "sentdm"
-          ? "sentdm"
-          : data.otpProvider === "prelude"
-            ? "prelude"
-            : "synthetic",
-      );
       setError("");
     } catch {
       setError("Nuk u lidhëm me shërbimin e verifikimit. Provo përsëri.");
@@ -1274,6 +1366,7 @@ function OtpDialog({
   }
 
   async function check() {
+    if (!identity) return;
     if (!/^\d{6}$/.test(code)) {
       setError("Shkruaj kodin gjashtëshifror që erdhi në WhatsApp.");
       return;
@@ -1283,7 +1376,12 @@ function OtpDialog({
       const response = await fetch(`${issuerUrl}/v1/otp/check`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ challengeId: challenge, phone: challengePhone, code }),
+        body: JSON.stringify({
+          challengeId: challenge,
+          phone: challengePhone,
+          code,
+          identityCommitment: identity.commitment,
+        }),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -1294,7 +1392,13 @@ function OtpDialog({
         );
         return;
       }
-      onVerified(data.credential);
+      onVerified({
+        protocol: "semaphore-v4",
+        identity: identity.identity,
+        snapshot: data.snapshot,
+        expiresAt: data.membershipExpiresAt,
+      });
+      localStorage.removeItem("kuvend.pendingIdentity.v1");
     } catch {
       setError("Nuk u lidhëm me shërbimin e verifikimit. Provo përsëri.");
     } finally {
@@ -1381,7 +1485,7 @@ function OtpDialog({
               Kodi dërgohet vetëm në WhatsApp. Nuk ka SMS rezervë.
             </FieldDescription>
           </Field>
-          <Button className="full" disabled={submitting} onClick={() => void start()}>
+          <Button className="full" disabled={submitting || !identity} onClick={() => void start()}>
             {submitting ? "Po dërgohet…" : "Dërgo kodin në WhatsApp"}
           </Button>
         </FieldGroup>
@@ -1408,11 +1512,6 @@ function OtpDialog({
               placeholder="123456"
             />
           </Field>
-          {otpProvider === "synthetic" && (
-            <p className="dev-note">
-              Beta sintetike: përdor kodin <strong>123456</strong>.
-            </p>
-          )}
           <div className="dialog-actions">
             <Button
               variant="outline"
@@ -1561,7 +1660,7 @@ function ProposalDialog({
   onClose,
   onCreated,
 }: {
-  credential: string;
+  credential: BrowserCredential | null;
   onNeedCredential: (draft: Draft) => void;
   onClose: () => void;
   onCreated: (proposal: ProposalRecord, secret: string) => void;
@@ -1618,13 +1717,19 @@ function ProposalDialog({
     if (!credential) return onNeedCredential(draft);
     const capabilitySecret = crypto.randomUUID();
     const authorCapabilityHash = await sha256(capabilitySecret);
+    let credentialProof;
+    try {
+      credentialProof = await proofFor(credential, "1", `proposal:${authorCapabilityHash}`);
+    } catch {
+      return setError("Grupi anonim nuk është ende gati ose dëshmia ka skaduar.");
+    }
     const response = await fetch(`${civicUrl}/v1/proposals`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         ...draft,
         scope: "national",
-        credential,
+        credentialProof,
         authorCapabilityHash,
         ...(displayPreference.mode === "name" && displayPreference.name.trim()
           ? { publicAuthorName: displayPreference.name.trim() }
@@ -2297,7 +2402,7 @@ function ArgumentDialog({
   onCreated,
 }: {
   proposal: ProposalRecord;
-  credential: string;
+  credential: BrowserCredential | null;
   onNeedCredential: (
     body: string,
     position: "for" | "against",
@@ -2333,9 +2438,12 @@ function ArgumentDialog({
     const visibleName =
       displayPreference.mode === "name" ? displayPreference.name.trim() : undefined;
     if (!credential) return onNeedCredential(body, position, evidence, visibleName);
-    const holder = localStorage.getItem("kuvend.holderSecret.v1") ?? crypto.randomUUID();
-    localStorage.setItem("kuvend.holderSecret.v1", holder);
-    const contributionNullifier = await sha256(`${holder}:${proposal.id}:argument:${position}`);
+    let credentialProof;
+    try {
+      credentialProof = await proofFor(credential, "1", `argument:${proposal.id}:${position}`);
+    } catch {
+      return setError("Grupi anonim nuk është ende gati ose dëshmia ka skaduar.");
+    }
     const response = await fetch(`${civicUrl}/v1/arguments`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -2345,8 +2453,7 @@ function ArgumentDialog({
         body,
         evidence,
         ...(visibleName ? { publicAuthorName: visibleName } : {}),
-        credential,
-        contributionNullifier,
+        credentialProof,
       }),
     });
     if (!response.ok) return setError("Argumenti nuk u dërgua. Mund të jetë dërguar më parë.");

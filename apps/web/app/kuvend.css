@@ -7,6 +7,30 @@
   width: min(100% - 2rem, var(--kuvend-content));
   margin-inline: auto;
 }
+
+.empty-catalogue {
+  display: grid;
+  min-height: 60vh;
+  place-content: center;
+  justify-items: start;
+  gap: 1rem;
+  max-width: 44rem;
+  padding-block: 4rem;
+}
+
+.empty-catalogue h1 {
+  max-width: 14ch;
+  font-size: clamp(2.25rem, 7vw, 4.5rem);
+  line-height: 0.98;
+  letter-spacing: -0.055em;
+}
+
+.empty-catalogue p {
+  max-width: 60ch;
+  color: var(--kuvend-ink-soft);
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
 .hero {
   display: grid;
   gap: 1.5rem;

@@ -4,6 +4,6 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY packages ./packages
 COPY apps/issuer ./apps/issuer
-RUN pnpm install --frozen-lockfile && pnpm --filter @kuvend/issuer build
+RUN pnpm install --frozen-lockfile && pnpm --filter @kuvend/credential build && pnpm --filter @kuvend/issuer build
 EXPOSE 4001
 CMD ["pnpm", "--filter", "@kuvend/issuer", "start"]

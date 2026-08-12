@@ -38,7 +38,7 @@ Better Auth can be useful for maintainers, sponsor administration, and explicitl
 
 ## What is implemented
 
-The current milestone is **Phase 1: synthetic local reference system**. It includes:
+The current milestone is an **experimental end-to-end beta**. It includes:
 
 - a modern, mobile-first Next.js PWA built with shadcn/ui;
 - a six-step proposal wizard with optional AI review, duplicate suggestions, structured evidence links, a final review, and explicit confirmation;
@@ -46,7 +46,7 @@ The current milestone is **Phase 1: synthetic local reference system**. It inclu
 - private author-capability workflows for revision, withdrawal, appeal, and recovery-secret download;
 - a separate moderation dashboard with two-person high-risk decisions, institutional response tracking, and append-only administrator audits;
 - strict civic API schemas that reject phone numbers and stable participant identifiers;
-- isolated synthetic credential issuance, assistant, administration, and notification services;
+- isolated WhatsApp verification and Semaphore membership issuance, assistant, administration, and notification services;
 - an issuer-only Sent adapter for a reviewed WhatsApp OTP trial, with provider credentials confined to the issuer trust domain;
 - proposal metadata, social preview images, a sitemap, robots policy, and an RSS feed for discovery and sharing;
 - encrypted, durable web-push subscriptions with topic selection and unsubscribe, without joining notification data to civic identities;
@@ -64,7 +64,7 @@ Do not deploy this repository for sensitive participation yet. Sent can verify c
 
 ## Development
 
-The repository contains a synthetic reference implementation. It uses fake credentials and harmless seed proposals so that the complete experience can be tested without real identities or a claim of production anonymity.
+The repository contains a real anonymous-membership implementation based on Semaphore V4. The integration is experimental and still requires independent cryptographic, privacy, and operational review before Kuvend makes stronger anonymity assurances.
 
 ```bash
 corepack enable

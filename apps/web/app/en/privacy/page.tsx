@@ -20,9 +20,9 @@ export default function EnglishPrivacyPage() {
       alternate={{ href: "/privatesia", label: "Lexoje këtë politikë në shqip" }}
     >
       <aside className="trust-status" aria-label="Policy status">
-        <strong>Draft for legal review.</strong> This policy describes the synthetic beta and the
-        intended architecture. Real WhatsApp verification will not be activated until the impact
-        assessment, processor agreements, and legal review are approved.
+        <strong>Experimental beta.</strong> This policy describes the live WhatsApp verification,
+        Semaphore membership system, and current limits. Assessments, processor agreements, and
+        independent reviews are published as they are completed.
       </aside>
 
       <h2>1. Who is responsible</h2>
@@ -38,17 +38,16 @@ export default function EnglishPrivacyPage() {
 
       <h2 id="anonymous-voting">2. How verification is separated from participation</h2>
       <p>
-        The isolated issuer temporarily receives the number, requests a one-time code, and issues an
-        anonymous credential. The civic service receives only a cryptographic proof and a
-        proposal-scoped marker. Its schemas reject phone numbers, OTPs, identity sessions, and
-        stable participant identifiers.
+        The isolated issuer temporarily receives the number, requests a one-time code, and records
+        only the public commitment of an identity created on the device. The civic service receives
+        only a cryptographic proof and a proposal-scoped marker. Its schemas reject phone numbers,
+        OTPs, identity sessions, and stable participant identifiers.
       </p>
       <p>
-        In a real WhatsApp trial, Sent uses its managed sender and, together with WhatsApp/Meta,
-        processes the number and delivery data. Sent and Meta do not receive proposal text, votes,
-        arguments, inclusion receipts, or recovery secrets. During beta the issuer does not yet have
-        an independent operator, so Kuvend does not claim that maintainers technically cannot see
-        the number.
+        Sent uses its managed sender and, together with WhatsApp/Meta, processes the number and
+        delivery data. Sent and Meta do not receive proposal text, votes, arguments, inclusion
+        receipts, or recovery secrets. During beta the issuer does not yet have an independent
+        operator, so Kuvend does not claim that maintainers technically cannot see the number.
       </p>
 
       <h2>3. Data, purposes, and proposed legal basis</h2>
@@ -77,8 +76,8 @@ export default function EnglishPrivacyPage() {
       <p>
         Proposed legal bases are providing the service requested by the user, legitimate interests
         in security and integrity, consent for notifications and a voluntary public name, and legal
-        obligations where applicable. The final assessment is part of the legal review and DPIA
-        before real processing.
+        obligations where applicable. The legal basis and DPIA remain under review during the beta;
+        material changes are published here.
       </p>
 
       <h2>4. What OTP does not prove</h2>

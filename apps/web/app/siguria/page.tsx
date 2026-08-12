@@ -23,10 +23,10 @@ export default function SecurityPage() {
       </ul>
       <h2>Çfarë nuk garantohet ende</h2>
       <p>
-        Beta nuk ka ende protokoll kredencialesh të miratuar nga kriptograf i pavarur, operator të
-        jashtëm të lëshuesit dhe relay të pavarur. Një pajisje e komprometuar, analiza e stilit të
-        shkrimit ose bashkëpunimi i disa operatorëve mund të krijojë rreziqe jashtë mbrojtjeve të
-        aplikacionit.
+        Beta përdor Semaphore V4, por integrimi i plotë nuk është miratuar ende nga kriptograf i
+        pavarur dhe nuk ka operator të jashtëm të lëshuesit ose relay të pavarur. Një pajisje e
+        komprometuar, analiza e stilit të shkrimit ose bashkëpunimi i disa operatorëve mund të
+        krijojë rreziqe jashtë mbrojtjeve të aplikacionit.
       </p>
       <h2>Raporto një problem</h2>
       <p>

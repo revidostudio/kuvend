@@ -6,6 +6,13 @@ export interface ChallengeRecord {
   verificationState?: string;
   expiresAt: number;
   attempts: number;
+  identityCommitment: string;
+}
+
+export interface MembershipRecord {
+  phoneDigest: string;
+  identityCommitment: string;
+  expiresAt: number;
 }
 
 export interface ChallengeStore {
@@ -19,12 +26,18 @@ export interface ChallengeStore {
     phoneDigest: string,
     now?: number,
   ): Promise<{ allowed: boolean; retryAfterSeconds: number }>;
+  putMembership(
+    record: MembershipRecord,
+    now?: number,
+  ): Promise<"created" | "renewed" | "conflict">;
+  activeCommitments(now?: number): Promise<string[]>;
 }
 
 export class MemoryChallengeStore implements ChallengeStore {
   readonly kind = "memory" as const;
   private readonly challenges = new Map<string, ChallengeRecord>();
   private readonly starts = new Map<string, { windowStart: number; count: number }>();
+  private readonly memberships = new Map<string, MembershipRecord>();
 
   async put(challenge: ChallengeRecord) {
     this.challenges.set(challenge.id, { ...challenge });
@@ -72,6 +85,25 @@ export class MemoryChallengeStore implements ChallengeStore {
       retryAfterSeconds: Math.max(1, Math.ceil((limit.windowStart + 10 * 60_000 - now) / 1_000)),
     };
   }
+
+  async putMembership(record: MembershipRecord, now = Date.now()) {
+    const current = this.memberships.get(record.phoneDigest);
+    if (
+      current &&
+      current.expiresAt > now &&
+      current.identityCommitment !== record.identityCommitment
+    )
+      return "conflict" as const;
+    this.memberships.set(record.phoneDigest, { ...record });
+    return current ? ("renewed" as const) : ("created" as const);
+  }
+
+  async activeCommitments(now = Date.now()) {
+    return [...this.memberships.values()]
+      .filter((record) => record.expiresAt > now)
+      .map((record) => record.identityCommitment)
+      .sort((a, b) => (BigInt(a) < BigInt(b) ? -1 : BigInt(a) > BigInt(b) ? 1 : 0));
+  }
 }
 
 export class PostgresChallengeStore implements ChallengeStore {
@@ -90,10 +122,13 @@ export class PostgresChallengeStore implements ChallengeStore {
         verification_state text,
         expires_at timestamptz not null,
         attempts integer not null default 0,
+        identity_commitment text not null default '0',
         created_at timestamptz not null default now()
       )
     `;
     await this.sql`alter table otp_challenges add column if not exists verification_state text`;
+    await this
+      .sql`alter table otp_challenges add column if not exists identity_commitment text not null default '0'`;
     await this
       .sql`create index if not exists otp_challenges_expiry_idx on otp_challenges (expires_at)`;
     await this.sql`
@@ -103,17 +138,29 @@ export class PostgresChallengeStore implements ChallengeStore {
         attempts integer not null
       )
     `;
+    await this.sql`
+      create table if not exists anonymous_memberships (
+        phone_digest text primary key,
+        identity_commitment text not null unique,
+        expires_at timestamptz not null,
+        created_at timestamptz not null default now(),
+        renewed_at timestamptz not null default now()
+      )
+    `;
+    await this
+      .sql`create index if not exists anonymous_memberships_expiry_idx on anonymous_memberships (expires_at)`;
   }
 
   async put(challenge: ChallengeRecord) {
     await this.sql`
-      insert into otp_challenges (challenge_id, phone_digest, verification_state, expires_at, attempts)
-      values (${challenge.id}, ${challenge.phoneDigest}, ${challenge.verificationState ?? null}, ${new Date(challenge.expiresAt)}, ${challenge.attempts})
+      insert into otp_challenges (challenge_id, phone_digest, verification_state, expires_at, attempts, identity_commitment)
+      values (${challenge.id}, ${challenge.phoneDigest}, ${challenge.verificationState ?? null}, ${new Date(challenge.expiresAt)}, ${challenge.attempts}, ${challenge.identityCommitment})
       on conflict (challenge_id) do update set
         phone_digest = excluded.phone_digest,
         verification_state = excluded.verification_state,
         expires_at = excluded.expires_at,
-        attempts = excluded.attempts
+        attempts = excluded.attempts,
+        identity_commitment = excluded.identity_commitment
     `;
   }
 
@@ -125,9 +172,10 @@ export class PostgresChallengeStore implements ChallengeStore {
         verification_state: string | null;
         expires_at: Date;
         attempts: number;
+        identity_commitment: string;
       }>
     >`
-      select challenge_id, phone_digest, verification_state, expires_at, attempts
+      select challenge_id, phone_digest, verification_state, expires_at, attempts, identity_commitment
       from otp_challenges where challenge_id = ${id}
     `;
     const row = rows[0];
@@ -138,6 +186,7 @@ export class PostgresChallengeStore implements ChallengeStore {
           ...(row.verification_state ? { verificationState: row.verification_state } : {}),
           expiresAt: row.expires_at.getTime(),
           attempts: row.attempts,
+          identityCommitment: row.identity_commitment,
         }
       : undefined;
   }
@@ -185,5 +234,43 @@ export class PostgresChallengeStore implements ChallengeStore {
         Math.ceil((limit.window_start.getTime() + 10 * 60_000 - now) / 1_000),
       ),
     };
+  }
+
+  async putMembership(record: MembershipRecord, now = Date.now()) {
+    const rows = await this.sql<Array<{ identity_commitment: string; expires_at: Date }>>`
+      select identity_commitment, expires_at from anonymous_memberships
+      where phone_digest = ${record.phoneDigest}
+    `;
+    const current = rows[0];
+    if (
+      current &&
+      current.expires_at.getTime() > now &&
+      current.identity_commitment !== record.identityCommitment
+    )
+      return "conflict" as const;
+    try {
+      await this.sql`
+        insert into anonymous_memberships (phone_digest, identity_commitment, expires_at)
+        values (${record.phoneDigest}, ${record.identityCommitment}, ${new Date(record.expiresAt)})
+        on conflict (phone_digest) do update set
+          identity_commitment = excluded.identity_commitment,
+          expires_at = excluded.expires_at,
+          renewed_at = now()
+      `;
+    } catch (error) {
+      if (error instanceof postgres.PostgresError && error.code === "23505")
+        return "conflict" as const;
+      throw error;
+    }
+    return current ? ("renewed" as const) : ("created" as const);
+  }
+
+  async activeCommitments(now = Date.now()) {
+    const rows = await this.sql<Array<{ identity_commitment: string }>>`
+      select identity_commitment from anonymous_memberships
+      where expires_at > ${new Date(now)}
+      order by identity_commitment::numeric
+    `;
+    return rows.map((row) => row.identity_commitment);
   }
 }
