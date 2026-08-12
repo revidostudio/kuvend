@@ -23,3 +23,5 @@ Kuvend uses AI only as an optional editor. The participant remains the author an
 The interface shows original and suggested text together with `Keep my text` and `Use this version`. Similarity is advisory and never silently merges content.
 
 Sensitive use requires self-hosted processing or an approved zero-data-retention arrangement and review by native Albanian speakers across dialects, regions, ages, and education levels.
+
+When OpenRouter is configured, Kuvend requests Zero Data Retention routing and structured output. The assistant service sends only the draft fields the participant explicitly asks to check; it never sends phone, credential, ballot, receipt, capability, IP, or device identifiers. OpenRouter and its selected model provider remain subprocessors and must be named in the privacy notice before real use.

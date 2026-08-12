@@ -101,9 +101,11 @@ export default function PrivacyPage() {
       <h2>6. Marrësit dhe transferimet</h2>
       <p>
         Railway ofron infrastrukturën e aplikacionit dhe bazat e ndara; Cloudflare ofron DNS,
-        mbrojtje dhe shpërndarje; Sent dhe Meta/WhatsApp përdoren vetëm për dërgimin e kodit; një
-        ofrues AI përdoret vetëm kur përdoruesi kërkon ndihmë opsionale. Kuvend nuk shet të dhëna,
-        nuk shfaq reklama dhe nuk ngarkon SDK analitike ose gjurmimi në shfletues.
+        mbrojtje dhe shpërndarje; Sent dhe Meta/WhatsApp përdoren vetëm për dërgimin e kodit;
+        OpenRouter dhe ofruesi i modelit përdoren vetëm kur përdoruesi kërkon kontrollin opsional të
+        gramatikës dhe drejtshkrimit. Kërkesa kufizohet te drafti i zgjedhur dhe kërkon rrugëzim pa
+        ruajtje të të dhënave. Kuvend nuk shet të dhëna, nuk shfaq reklama dhe nuk ngarkon SDK
+        analitike ose gjurmimi në shfletues.
       </p>
       <p>
         Disa përpunues janë jashtë Shqipërisë. Revido LLC dokumenton marrëveshjet e përpunimit,

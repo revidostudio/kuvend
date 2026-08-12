@@ -73,10 +73,11 @@ export default function TermsPage() {
 
       <h2>6. Ndihma AI dhe shërbimet e jashtme</h2>
       <p>
-        Ndihma AI është opsionale. Ajo mund të korrigjojë, thjeshtojë, transkriptojë, përkthejë ose
-        sugjerojë dublikata, por nuk duhet të ndryshojë kuptimin politik, të shpikë fakte ose të
-        marrë vendim moderimi. Ti miraton tekstin para publikimit. Veprimi “Hulumto” hap ChatGPT,
-        Claude ose Google vetëm pasi e zgjedh; këto shërbime kanë kushtet dhe politikat e tyre.
+        Ndihma me IA është opsionale. Kontrolli i gramatikës dhe drejtshkrimit përdor OpenRouter dhe
+        një ofrues modeli vetëm pasi e kërkon; nuk duhet të ndryshojë kuptimin politik, të shpikë
+        fakte ose të marrë vendim moderimi. Ti miraton tekstin para publikimit. Veprimi “Hulumto”
+        hap ChatGPT, Claude ose Google vetëm pasi e zgjedh; këto shërbime kanë kushtet dhe politikat
+        e tyre.
       </p>
 
       <h2>7. Votimi dhe rezultatet</h2>

@@ -46,14 +46,14 @@ representative is required.
 
 ## Processor register
 
-| Processor         | Data                                                                       | Role and gate                                                                                                  |
-| ----------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| Railway           | service records, separated encrypted databases and infrastructure metadata | processor; region, DPA, access, backup and deletion review                                                     |
-| Cloudflare        | IP and network metadata; two-letter country header                         | processor/network provider; DPA, logging and transfer review                                                   |
-| Sent              | phone, OTP variables and delivery metadata                                 | verification processor; execute DPA, approve subprocessors, retention, dashboard access, transfer and deletion |
-| Meta/WhatsApp     | phone and message/delivery metadata                                        | communications provider; approve legal basis, transfer and retention                                           |
-| AI provider       | user-selected draft only                                                   | processor; zero-retention agreement or explicitly consented low-risk use only                                  |
-| independent relay | source IP and encrypted padded request                                     | future independent operator; no content access                                                                 |
+| Processor                   | Data                                                                       | Role and gate                                                                                                  |
+| --------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Railway                     | service records, separated encrypted databases and infrastructure metadata | processor; region, DPA, access, backup and deletion review                                                     |
+| Cloudflare                  | IP and network metadata; two-letter country header                         | processor/network provider; DPA, logging and transfer review                                                   |
+| Sent                        | phone, OTP variables and delivery metadata                                 | verification processor; execute DPA, approve subprocessors, retention, dashboard access, transfer and deletion |
+| Meta/WhatsApp               | phone and message/delivery metadata                                        | communications provider; approve legal basis, transfer and retention                                           |
+| OpenRouter + model provider | user-selected draft only                                                   | processors; request-level ZDR routing, subprocessor and transfer review required                               |
+| independent relay           | source IP and encrypted padded request                                     | future independent operator; no content access                                                                 |
 
 Sent is not an identity provider for the civic service. Only the isolated issuer may call Sent.
 There is no browser SDK, webhook, device signal, SMS fallback, civic metadata, or retained Sent

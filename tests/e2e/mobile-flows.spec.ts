@@ -499,6 +499,9 @@ test("mobile proposal wizard can skip AI, verify, submit and show recovery secre
   await page.getByRole("button", { name: /Vazhdo/ }).click();
 
   await expect(page.getByRole("group", { name: "Prova dhe media Opsionale" })).toHaveCount(1);
+  await expect(
+    page.getByRole("button", { name: "Kontrollo gramatikën dhe drejtshkrimin me IA" }),
+  ).toBeVisible();
   await page.getByRole("button", { name: /Shto provë ose media/ }).click();
   await expect(page.getByRole("heading", { name: "Shto provë ose media" })).toBeVisible();
   await page.getByLabel("Titulli").fill("Plani vendor i gjelbërimit");

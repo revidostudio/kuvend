@@ -1709,6 +1709,7 @@ function ProposalDialog({
   );
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState("");
+  const [improving, setImproving] = useState(false);
   const [displayPreference, setDisplayPreference] = useState<DisplayPreference>(() =>
     readDisplayPreference(),
   );
@@ -1724,27 +1725,43 @@ function ProposalDialog({
     setDraft((current) => ({ ...current, [key]: value }));
   }
   async function improve() {
-    const response = await fetch(`${assistantUrl}/v1/assist`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        title: draft.title,
-        problem: draft.problem,
-        proposedChange: draft.proposedChange,
-        locale: "sq",
-      }),
-    });
-    if (!response.ok) return setError("Plotëso problemin dhe ndryshimin para se të vazhdosh.");
-    const data = await response.json();
-    setSuggestion({ ...draft, ...data.suggestion });
-    const duplicateResponse = await fetch(`${assistantUrl}/v1/duplicates`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ title: draft.title, problem: draft.problem }),
-    });
-    setDuplicates((await duplicateResponse.json()).suggestions ?? []);
-    setStep(5);
+    setImproving(true);
     setError("");
+    try {
+      const response = await fetch(`${assistantUrl}/v1/assist`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          title: draft.title,
+          problem: draft.problem,
+          proposedChange: draft.proposedChange,
+          locale: "sq",
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok)
+        return setError(
+          data.error === "grammar_assistant_not_configured"
+            ? "Kontrolli me IA nuk është konfiguruar ende. Teksti yt është ruajtur; mund të vazhdosh pa IA."
+            : "Kontrolli me IA nuk është i disponueshëm tani. Teksti yt është ruajtur; provo përsëri ose vazhdo pa IA.",
+        );
+      setSuggestion({ ...draft, ...data.suggestion });
+      const duplicateResponse = await fetch(`${assistantUrl}/v1/duplicates`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ title: draft.title, problem: draft.problem }),
+      });
+      setDuplicates(
+        duplicateResponse.ok ? ((await duplicateResponse.json()).suggestions ?? []) : [],
+      );
+      setStep(5);
+    } catch {
+      setError(
+        "Nuk u lidhëm me kontrollin e gramatikës dhe drejtshkrimit. Teksti yt është ruajtur; provo përsëri ose vazhdo pa IA.",
+      );
+    } finally {
+      setImproving(false);
+    }
   }
   async function submit() {
     if (!credential) return onNeedCredential(draft);
@@ -2025,8 +2042,9 @@ function ProposalDialog({
             <Button variant="outline" onClick={() => setStep(6)}>
               Pa ndihmë AI
             </Button>
-            <Button onClick={() => void improve()}>
-              Kontrollo me AI <ChevronRight data-icon="inline-end" />
+            <Button disabled={improving} onClick={() => void improve()}>
+              {improving ? "Po kontrollohet…" : "Kontrollo gramatikën dhe drejtshkrimin me IA"}
+              {!improving && <ChevronRight data-icon="inline-end" />}
             </Button>
           </>
         )}
