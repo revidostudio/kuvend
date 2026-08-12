@@ -902,6 +902,10 @@
   min-height: 16rem;
   padding-block: 0.5rem;
 }
+.wizard-step {
+  display: grid;
+  gap: 1rem;
+}
 .wizard-footer,
 .dialog-actions,
 .choice-actions {
@@ -934,15 +938,39 @@
 .compare .suggested {
   background: var(--kuvend-surface);
 }
-.final-review > div {
-  display: grid;
-  gap: 0.25rem;
+.final-review {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
 }
-.final-review > div > span {
+.final-review > section {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1rem;
+}
+.final-review > section + section {
+  border-top: 1px solid var(--kuvend-border);
+}
+.final-review > section > span {
   color: var(--kuvend-ink-soft);
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
+}
+.final-review h3 {
+  font-size: 1.125rem;
+  line-height: 1.35;
+}
+.final-review-meta {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+.final-confirmation-check {
+  padding: 0.875rem;
+  line-height: 1.5;
+}
+.choice-actions > button {
+  flex: 1;
 }
 .position-tabs {
   display: grid;
@@ -1288,6 +1316,10 @@
   }
   .wizard-footer > button:nth-child(3) {
     grid-column: 1 / -1;
+  }
+  .wizard-review-step .choice-actions {
+    display: grid;
+    grid-template-columns: 1fr;
   }
   .notification-topics label {
     min-height: 3rem;

@@ -1817,7 +1817,7 @@ function ProposalDialog({
           </FieldGroup>
         )}
         {step === 5 && (
-          <>
+          <div className="wizard-step wizard-review-step">
             <Alert>
               <CircleHelp />
               <AlertTitle>AI sugjeron; ti vendos</AlertTitle>
@@ -1866,45 +1866,56 @@ function ProposalDialog({
                 Përdor sugjerimin
               </Button>
             </div>
-          </>
+          </div>
         )}
         {step === 6 && (
-          <>
+          <div className="wizard-step wizard-confirmation-step">
+            <Alert>
+              <ShieldCheck aria-hidden="true" />
+              <AlertTitle>Kontrollo versionin përfundimtar</AlertTitle>
+              <AlertDescription>
+                Ky është teksti që do të shohin moderatorët dhe, nëse pranohet, publiku.
+              </AlertDescription>
+            </Alert>
             <div className="final-review">
-              <div>
+              <section>
                 <span>Titulli</span>
-                <strong>{draft.title}</strong>
-              </div>
-              <div>
+                <h3>{draft.title}</h3>
+              </section>
+              <section>
                 <span>Problemi</span>
                 <p>{draft.problem}</p>
-              </div>
-              <div>
-                <span>Ndryshimi</span>
+              </section>
+              <section>
+                <span>Ndryshimi i propozuar</span>
                 <p>{draft.proposedChange}</p>
-              </div>
-              <div>
+              </section>
+              <section className="final-review-meta">
                 <span>Kategoria</span>
                 <Badge variant="secondary">
                   {categoryLabels[draft.category] ?? draft.category}
                 </Badge>
-              </div>
+              </section>
               {draft.evidence.length > 0 && (
-                <div>
+                <section>
                   <span>Prova dhe media</span>
                   <EvidenceList items={draft.evidence} />
-                </div>
+                </section>
               )}
-              <div>
+              <section className="final-review-meta">
                 <span>Publikohet si</span>
                 <strong>{displayPreferenceLabel(displayPreference)}</strong>
-              </div>
+              </section>
             </div>
-            <CheckboxField checked={confirmed} onCheckedChange={setConfirmed}>
+            <CheckboxField
+              className="final-confirmation-check"
+              checked={confirmed}
+              onCheckedChange={setConfirmed}
+            >
               <strong>E konfirmoj këtë version.</strong> E kuptoj se do të shqyrtohet nga
               moderatorët dhe, nëse pranohet, do të hyjë në votim këshillues 14-ditor.
             </CheckboxField>
-          </>
+          </div>
         )}
       </div>
       {error && (

@@ -507,6 +507,16 @@ test("mobile proposal wizard can skip AI, verify, submit and show recovery secre
   await expect(page.getByRole("link", { name: "Plani vendor i gjelbërimit" })).toBeVisible();
   await page.getByRole("button", { name: "Pa ndihmë AI" }).click();
   await expect(page.getByRole("heading", { name: "Konfirmo propozimin" })).toBeVisible();
+  await expect(page.getByText("Kontrollo versionin përfundimtar")).toBeVisible();
+  const finalReview = page.locator(".final-review");
+  await expect(finalReview.getByText("Ndryshimi i propozuar", { exact: true })).toBeVisible();
+  await expect(finalReview.locator("section")).toHaveCount(6);
+  const finalReviewGeometry = await finalReview.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return { left: rect.left, right: rect.right, viewport: window.innerWidth };
+  });
+  expect(finalReviewGeometry.left).toBeGreaterThanOrEqual(0);
+  expect(finalReviewGeometry.right).toBeLessThanOrEqual(finalReviewGeometry.viewport);
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Konfirmo dhe dorëzo" }).click();
 
