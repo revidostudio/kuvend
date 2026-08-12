@@ -10,13 +10,13 @@ describe("SentDmOtpProvider", () => {
       const request = JSON.parse(String(init?.body)) as {
         to: string[];
         channel: string[];
-        template: { id: string; parameters: { code: string } };
+        template: { id: string; parameters: { var_1: string } };
         sandbox: boolean;
       };
       expect(request.to).toEqual(["+355691234567"]);
       expect(request.channel).toEqual(["whatsapp"]);
       expect(request.template.id).toBe("otp-template");
-      expect(request.template.parameters.code).toMatch(/^\d{6}$/);
+      expect(request.template.parameters.var_1).toMatch(/^\d{6}$/);
       expect(request.sandbox).toBe(false);
       return new Response(JSON.stringify({ success: true }), { status: 202 });
     });
@@ -29,13 +29,13 @@ describe("SentDmOtpProvider", () => {
 
     const started = await provider.start("+355691234567");
     const body = JSON.parse(String(fetchImpl.mock.calls[0]?.[1]?.body)) as {
-      template: { parameters: { code: string } };
+      template: { parameters: { var_1: string } };
     };
     expect(started.verificationState).toMatch(/^[a-f0-9]{64}$/);
     expect(
       await provider.check(
         "+355691234567",
-        body.template.parameters.code,
+        body.template.parameters.var_1,
         started.verificationState,
       ),
     ).toBe("valid");

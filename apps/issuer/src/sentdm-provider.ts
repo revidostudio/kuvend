@@ -35,7 +35,10 @@ export class SentDmOtpProvider implements OtpProvider {
     }
     this.baseUrl = (options.baseUrl ?? "https://api.sent.dm").replace(/\/$/, "");
     this.fetchImpl = options.fetchImpl ?? fetch;
-    this.codeParameter = options.codeParameter ?? "code";
+    // Sent authentication templates expose the one-time code as `var_1`.
+    // Keep this configurable for future templates, but make the provider's
+    // safe default match Sent's published template contract.
+    this.codeParameter = options.codeParameter ?? "var_1";
   }
 
   async start(phone: string) {

@@ -30,6 +30,8 @@ The issuer uses an `OTP_PROVIDER` adapter. `development` is local-only. Sent is 
 
 The Sent adapter generates a six-digit code inside the isolated issuer and sends only the E.164 phone number, approved template ID, code and the explicit `whatsapp` channel to Sent. It does not send civic identifiers, proposal or voting-round identifiers, IP/device signals, frontend dispatch identifiers, names or cross-service correlation IDs. It does not register a webhook or retain Sent message IDs. The client repeats the phone number during the code check so the issuer stores only a rotating keyed phone digest and HMAC of the short-lived OTP between requests; plaintext phone numbers and OTPs are not placed in challenge state, logs, databases or backups.
 
+The current approved authentication template declares its one-time-code variable as `var_1`; production must therefore set `SENTDM_CODE_PARAMETER=var_1`. A different template may use another variable name only after its published Sent schema is checked and the corresponding provider contract test is updated.
+
 Before enabling `OTP_PROVIDER=sentdm`:
 
 1. execute the DPA, subprocessor, EEA-hosting, access, deletion and retention review;
