@@ -92,6 +92,7 @@ import {
 } from "../features/kuvend/display-preference";
 import { extractProposalId, proposalPath } from "./proposal-url";
 import { internationalPhone, phoneCountries } from "../features/kuvend/phone-number";
+import { otpStartErrorMessage } from "../features/kuvend/otp-errors";
 
 const civicUrl = process.env.NEXT_PUBLIC_CIVIC_API_URL ?? "http://localhost:4000";
 const issuerUrl = process.env.NEXT_PUBLIC_ISSUER_URL ?? "http://localhost:4001";
@@ -139,6 +140,30 @@ const emptyDraft: Draft = {
   category: "community",
   evidence: [],
 };
+const pendingDraftStorageKey = "kuvend.pendingDraft.v1";
+
+function savePendingDraft(draft: Draft) {
+  const value = JSON.stringify(draft);
+  sessionStorage.setItem(pendingDraftStorageKey, value);
+  localStorage.setItem(pendingDraftStorageKey, value);
+}
+
+function clearPendingDraft() {
+  sessionStorage.removeItem(pendingDraftStorageKey);
+  localStorage.removeItem(pendingDraftStorageKey);
+}
+
+function readPendingDraft() {
+  try {
+    const value =
+      sessionStorage.getItem(pendingDraftStorageKey) ??
+      localStorage.getItem(pendingDraftStorageKey) ??
+      "null";
+    return JSON.parse(value) as Draft | null;
+  } catch {
+    return null;
+  }
+}
 
 async function sha256(value: string) {
   const bytes = new TextEncoder().encode(value);
@@ -1042,13 +1067,13 @@ export function KuvendApp({
         <ProposalDialog
           credential={credential}
           onNeedCredential={(draft) => {
-            sessionStorage.setItem("kuvend.pendingDraft.v1", JSON.stringify(draft));
+            savePendingDraft(draft);
             setAfterOtp("proposal");
             setDialog("otp");
           }}
           onClose={() => setDialog(null)}
           onCreated={(proposal, secret) => {
-            sessionStorage.removeItem("kuvend.pendingDraft.v1");
+            clearPendingDraft();
             setProposals((items) => [proposal, ...items]);
             setSelectedId(proposal.id);
             setRecoverySecret(secret);
@@ -1153,7 +1178,15 @@ export function KuvendApp({
       {dialog === "notification" && <NotificationDialog onClose={() => setDialog(null)} />}
       {dialog === "otp" && (
         <OtpDialog
-          onClose={() => setDialog(null)}
+          onClose={() => {
+            setDialog(null);
+            setAfterOtp(null);
+          }}
+          {...(afterOtp === "proposal" || afterOtp === "argument"
+            ? { onBack: () => setDialog(afterOtp) }
+            : {})}
+          backLabel={afterOtp === "proposal" ? "Kthehu te propozimi" : "Kthehu te argumenti"}
+          pendingContribution={afterOtp === "proposal" || afterOtp === "argument"}
           onVerified={(value) => {
             localStorage.setItem("kuvend.credential.v2", JSON.stringify(value));
             setCredential(value);
@@ -1265,9 +1298,15 @@ function DialogShell({
 
 function OtpDialog({
   onClose,
+  onBack,
+  backLabel,
+  pendingContribution = false,
   onVerified,
 }: {
   onClose: () => void;
+  onBack?: () => void;
+  backLabel?: string;
+  pendingContribution?: boolean;
   onVerified: (credential: BrowserCredential) => void;
 }) {
   const [country, setCountry] = useState<CountryCode>("AL");
@@ -1338,13 +1377,7 @@ function OtpDialog({
       });
       const data = await response.json();
       if (!response.ok) {
-        setError(
-          data.error === "verification_blocked" ||
-            data.error === "too_many_attempts" ||
-            data.error === "too_many_verification_requests"
-            ? "Nuk mund të dërgohet një kod tani. Provo përsëri më vonë."
-            : "WhatsApp nuk mund ta marrë kodin tani. Kontrollo numrin ose provo më vonë.",
-        );
+        setError(otpStartErrorMessage(data.error));
         return;
       }
       setChallenge(data.challengeId);
@@ -1423,6 +1456,15 @@ function OtpDialog({
           </a>
         </div>
       </div>
+      {pendingContribution && (
+        <Alert>
+          <ShieldCheck aria-hidden="true" />
+          <AlertTitle>Puna jote është ruajtur në këtë pajisje</AlertTitle>
+          <AlertDescription>
+            Mund të kthehesh te formulari ose ta rifreskosh këtë faqe pa humbur tekstin.
+          </AlertDescription>
+        </Alert>
+      )}
       {!challenge ? (
         <FieldGroup>
           <Field>
@@ -1449,9 +1491,20 @@ function OtpDialog({
               vetëm në WhatsApp përmes Sent.
             </FieldDescription>
           </Field>
-          <Button className="full" disabled={submitting || !identity} onClick={() => void start()}>
-            {submitting ? "Po dërgohet…" : "Dërgo kodin në WhatsApp"}
-          </Button>
+          <div className="dialog-actions otp-actions">
+            {onBack && (
+              <Button variant="outline" disabled={submitting} onClick={onBack}>
+                {backLabel ?? "Kthehu"}
+              </Button>
+            )}
+            <Button
+              className="full"
+              disabled={submitting || !identity}
+              onClick={() => void start()}
+            >
+              {submitting ? "Po dërgohet…" : "Dërgo kodin në WhatsApp"}
+            </Button>
+          </div>
         </FieldGroup>
       ) : (
         <FieldGroup>
@@ -1477,18 +1530,24 @@ function OtpDialog({
             />
           </Field>
           <div className="dialog-actions">
-            <Button
-              variant="outline"
-              disabled={submitting}
-              onClick={() => {
-                setChallenge("");
-                setChallengePhone("");
-                setCode("");
-                setError("");
-              }}
-            >
-              Ndrysho numrin
-            </Button>
+            {onBack ? (
+              <Button variant="outline" disabled={submitting} onClick={onBack}>
+                {backLabel ?? "Kthehu"}
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                disabled={submitting}
+                onClick={() => {
+                  setChallenge("");
+                  setChallengePhone("");
+                  setCode("");
+                  setError("");
+                }}
+              >
+                Ndrysho numrin
+              </Button>
+            )}
             <Button disabled={submitting} onClick={() => void check()}>
               {submitting ? "Po verifikohet…" : "Verifiko dhe vazhdo"}
             </Button>
@@ -1629,24 +1688,30 @@ function ProposalDialog({
   onClose: () => void;
   onCreated: (proposal: ProposalRecord, secret: string) => void;
 }) {
-  const savedDraft = (() => {
-    try {
-      return JSON.parse(sessionStorage.getItem("kuvend.pendingDraft.v1") ?? "null") as Draft | null;
-    } catch {
-      return null;
-    }
-  })();
+  const savedDraft = readPendingDraft();
   const [draft, setDraft] = useState<Draft>(savedDraft ?? emptyDraft);
-  const [step, setStep] = useState(savedDraft && credential ? 6 : 1);
+  const [step, setStep] = useState(
+    savedDraft &&
+      savedDraft.title.trim().length >= 8 &&
+      savedDraft.problem.trim().length >= 30 &&
+      savedDraft.proposedChange.trim().length >= 30
+      ? 6
+      : 1,
+  );
   const [suggestion, setSuggestion] = useState<Draft | null>(null);
   const [duplicates, setDuplicates] = useState<Array<{ id: string; title: string; score: number }>>(
     [],
   );
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState("");
+  const [improving, setImproving] = useState(false);
   const [displayPreference, setDisplayPreference] = useState<DisplayPreference>(() =>
     readDisplayPreference(),
   );
+  useEffect(() => {
+    if (draft.title || draft.problem || draft.proposedChange || draft.evidence.length > 0)
+      savePendingDraft(draft);
+  }, [draft]);
   function updateDisplayPreference(value: DisplayPreference) {
     setDisplayPreference(value);
     saveDisplayPreference(value);
@@ -1655,27 +1720,43 @@ function ProposalDialog({
     setDraft((current) => ({ ...current, [key]: value }));
   }
   async function improve() {
-    const response = await fetch(`${assistantUrl}/v1/assist`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        title: draft.title,
-        problem: draft.problem,
-        proposedChange: draft.proposedChange,
-        locale: "sq",
-      }),
-    });
-    if (!response.ok) return setError("Plotëso problemin dhe ndryshimin para se të vazhdosh.");
-    const data = await response.json();
-    setSuggestion({ ...draft, ...data.suggestion });
-    const duplicateResponse = await fetch(`${assistantUrl}/v1/duplicates`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ title: draft.title, problem: draft.problem }),
-    });
-    setDuplicates((await duplicateResponse.json()).suggestions ?? []);
-    setStep(5);
+    setImproving(true);
     setError("");
+    try {
+      const response = await fetch(`${assistantUrl}/v1/assist`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          title: draft.title,
+          problem: draft.problem,
+          proposedChange: draft.proposedChange,
+          locale: "sq",
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok)
+        return setError(
+          data.error === "grammar_assistant_not_configured"
+            ? "Kontrolli me IA nuk është konfiguruar ende. Teksti yt është ruajtur; mund të vazhdosh pa IA."
+            : "Kontrolli me IA nuk është i disponueshëm tani. Teksti yt është ruajtur; provo përsëri ose vazhdo pa IA.",
+        );
+      setSuggestion({ ...draft, ...data.suggestion });
+      const duplicateResponse = await fetch(`${assistantUrl}/v1/duplicates`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ title: draft.title, problem: draft.problem }),
+      });
+      setDuplicates(
+        duplicateResponse.ok ? ((await duplicateResponse.json()).suggestions ?? []) : [],
+      );
+      setStep(5);
+    } catch {
+      setError(
+        "Nuk u lidhëm me kontrollin e gramatikës dhe drejtshkrimit. Teksti yt është ruajtur; provo përsëri ose vazhdo pa IA.",
+      );
+    } finally {
+      setImproving(false);
+    }
   }
   async function submit() {
     if (!credential) return onNeedCredential(draft);
@@ -1730,6 +1811,20 @@ function ProposalDialog({
       subtitle="Një hap në herë. Asgjë nuk publikohet pa konfirmimin tënd."
       onClose={onClose}
     >
+      <div className="draft-save-status" role="status">
+        <ShieldCheck aria-hidden="true" />
+        <span>Drafti ruhet automatikisht në këtë pajisje.</span>
+        <Button
+          variant="ghost"
+          onClick={() => {
+            clearPendingDraft();
+            setDraft(emptyDraft);
+            onClose();
+          }}
+        >
+          Fshi draftin
+        </Button>
+      </div>
       <Progress value={(step / 6) * 100}>
         <ProgressLabel>Hapi {step} nga 6</ProgressLabel>
         <ProgressValue />
@@ -1942,8 +2037,9 @@ function ProposalDialog({
             <Button variant="outline" onClick={() => setStep(6)}>
               Pa ndihmë AI
             </Button>
-            <Button onClick={() => void improve()}>
-              Kontrollo me AI <ChevronRight data-icon="inline-end" />
+            <Button disabled={improving} onClick={() => void improve()}>
+              {improving ? "Po kontrollohet…" : "Kontrollo gramatikën dhe drejtshkrimin me IA"}
+              {!improving && <ChevronRight data-icon="inline-end" />}
             </Button>
           </>
         )}

@@ -261,7 +261,7 @@ function mobileOnly(width: number | undefined) {
 async function completeOtp(page: Page) {
   await expect(page.getByRole("heading", { name: "Verifiko me WhatsApp" })).toBeVisible();
   await expect(page.getByRole("combobox", { name: "Shteti dhe kodi telefonik" })).toHaveValue(
-    "Shqipëri",
+    "Shqipëri (+355)",
   );
   await page.getByLabel("Numri i WhatsApp").fill("069 123 4567");
   await page.getByRole("button", { name: "Dërgo kodin në WhatsApp" }).click();
@@ -269,6 +269,68 @@ async function completeOtp(page: Page) {
   await page.getByLabel("Kodi gjashtëshifror").fill("123456");
   await page.getByRole("button", { name: "Verifiko dhe vazhdo" }).click();
 }
+
+test("OTP outage is identified as a service problem rather than an invalid phone", async ({
+  page,
+}) => {
+  await page.route("**/v1/otp/start", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "verification_not_available" }),
+    }),
+  );
+
+  await page.goto("/");
+  await page.locator(".proposal-card").first().click();
+  await page.getByRole("button", { name: "Mbështes" }).click();
+  await page.getByLabel("Numri i WhatsApp").fill("069 123 4567");
+  await page.getByRole("button", { name: "Dërgo kodin në WhatsApp" }).click();
+
+  await expect(
+    page.getByText(
+      "Shërbimi i verifikimit është përkohësisht i padisponueshëm. Numri yt nuk është problemi; provo përsëri pas pak.",
+    ),
+  ).toBeVisible();
+});
+
+test("OTP delivery rejection keeps the selected country and allows correction", async ({
+  page,
+}) => {
+  let attempts = 0;
+  await page.route("**/v1/otp/start", (route) => {
+    attempts += 1;
+    return attempts === 1
+      ? route.fulfill({
+          status: 400,
+          contentType: "application/json",
+          body: JSON.stringify({ error: "verification_unavailable" }),
+        })
+      : route.fulfill({
+          status: 201,
+          contentType: "application/json",
+          body: JSON.stringify({ challengeId: "corrected-number", otpProvider: "sentdm" }),
+        });
+  });
+
+  await page.goto("/");
+  await page.locator(".proposal-card").first().click();
+  await page.getByRole("button", { name: "Mbështes" }).click();
+  const country = page.getByRole("combobox", { name: "Shteti dhe kodi telefonik" });
+  await page.getByRole("button", { name: "Kërko ose ndrysho shtetin" }).click();
+  await country.fill("Bashkuara");
+  await page.getByRole("option", { name: /Shtetet e Bashkuara.*\+1/ }).click();
+  await page.getByLabel("Numri i WhatsApp").fill("202 555 0147");
+  await page.getByRole("button", { name: "Dërgo kodin në WhatsApp" }).click();
+
+  await expect(page.getByText(/WhatsApp nuk mund ta marrë kodin tani/)).toBeVisible();
+  await expect(country).toHaveValue(/Shtetet e Bashkuara.*\(\+1\)/);
+  await page.getByLabel("Numri i WhatsApp").fill("202 555 0188");
+  await page.getByRole("button", { name: "Dërgo kodin në WhatsApp" }).click();
+
+  await expect(page.getByText("Kontrollo WhatsApp")).toBeVisible();
+  expect(attempts).toBe(2);
+});
 
 async function expectMobileSheet(page: Page) {
   const dialog = page.getByRole("dialog");
@@ -452,10 +514,7 @@ test("mobile vote completes OTP, final confirmation, result and receipt", async 
   expect(String(otpStartPayload?.identityCommitment)).toMatch(/^\d+$/);
 });
 
-test("country hint is ephemeral and the full country list is searchable", async ({
-  page,
-}, testInfo) => {
-  mobileOnly(testInfo.project.use.viewport?.width);
+test("country hint is ephemeral and the full country list is searchable", async ({ page }) => {
   let countryRequest: { method: string; postData: string | null } | undefined;
   await page.route("**/api/country", async (route) => {
     countryRequest = {
@@ -473,10 +532,13 @@ test("country hint is ephemeral and the full country list is searchable", async 
   await page.locator(".proposal-card").first().click();
   await page.getByRole("button", { name: "Mbështes" }).click();
   const country = page.getByRole("combobox", { name: "Shteti dhe kodi telefonik" });
-  await expect(country).toHaveValue("Itali");
+  await expect(country).toHaveValue("Itali (+39)");
   await country.fill("Shqip");
-  await page.getByRole("option", { name: "Shqipëri +355" }).click();
-  await expect(country).toHaveValue("Shqipëri");
+  const albania = page.getByRole("option", { name: "Shqipëri +355" });
+  await expect(albania).toBeVisible();
+  await expect(albania).toHaveText(/Shqipëri.*\+355/);
+  await albania.click();
+  await expect(country).toHaveValue("Shqipëri (+355)");
   expect(countryRequest).toEqual({ method: "GET", postData: null });
 });
 
@@ -499,6 +561,9 @@ test("mobile proposal wizard can skip AI, verify, submit and show recovery secre
   await page.getByRole("button", { name: /Vazhdo/ }).click();
 
   await expect(page.getByRole("group", { name: "Prova dhe media Opsionale" })).toHaveCount(1);
+  await expect(
+    page.getByRole("button", { name: "Kontrollo gramatikën dhe drejtshkrimin me IA" }),
+  ).toBeVisible();
   await page.getByRole("button", { name: /Shto provë ose media/ }).click();
   await expect(page.getByRole("heading", { name: "Shto provë ose media" })).toBeVisible();
   await page.getByLabel("Titulli").fill("Plani vendor i gjelbërimit");
@@ -520,6 +585,17 @@ test("mobile proposal wizard can skip AI, verify, submit and show recovery secre
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Konfirmo dhe dorëzo" }).click();
 
+  await expect(page.getByText("Puna jote është ruajtur në këtë pajisje")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Kthehu te propozimi" })).toBeVisible();
+  await page.getByRole("button", { name: "Kthehu te propozimi" }).click();
+  await expect(page.getByRole("heading", { name: "Konfirmo propozimin" })).toBeVisible();
+  await expect(page.getByText("Më shumë pemë në lagje", { exact: true })).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "Propozo" }).click();
+  await expect(page.getByRole("heading", { name: "Konfirmo propozimin" })).toBeVisible();
+  await expect(page.getByText("Më shumë pemë në lagje", { exact: true })).toBeVisible();
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Konfirmo dhe dorëzo" }).click();
   await completeOtp(page);
   await expect(page.getByRole("heading", { name: "Konfirmo propozimin" })).toBeVisible();
   await page.getByRole("checkbox").check();

@@ -100,8 +100,10 @@ export default function EnglishPrivacyPage() {
       <p>
         Railway supplies application infrastructure and separated databases; Cloudflare supplies
         DNS, protection, and delivery; Sent and Meta/WhatsApp are intended only for code delivery;
-        an AI provider is used only when a user requests optional assistance. Kuvend does not sell
-        data, show advertising, or load behavioral analytics or tracking SDKs in the browser.
+        OpenRouter and the selected model provider are used only when a user requests optional
+        grammar and spelling assistance. The request is limited to the selected draft and requires
+        zero-data-retention routing. Kuvend does not sell data, show advertising, or load behavioral
+        analytics or tracking SDKs in the browser.
       </p>
       <p>
         Some processors are outside Albania. Before real verification, Revido LLC must complete

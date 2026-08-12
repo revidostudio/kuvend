@@ -18,7 +18,14 @@ describe("assistant", () => {
   });
 
   it("keeps original text beside an optional suggestion", async () => {
-    const app = buildApp();
+    const app = buildApp({
+      correctGrammar: async () => ({
+        title: "Një titull",
+        problem: "Ka shumë hapësira këtu.",
+        proposedChange: "Duhet ta rregullojmë këtë pjesë.",
+        changes: ["U korrigjua drejtshkrimi."],
+      }),
+    });
     const response = await app.inject({
       method: "POST",
       url: "/v1/assist",
@@ -31,8 +38,30 @@ describe("assistant", () => {
     });
     expect(response.statusCode).toBe(200);
     expect(response.json().original.problem).toContain("shume   hapesira");
-    expect(response.json().suggestion.problem).toBe("Ka shume hapesira ketu.");
+    expect(response.json().suggestion.problem).toBe("Ka shumë hapësira këtu.");
     expect(response.json().retained).toBe(false);
+    expect(response.json().provider).toBe("openrouter");
+    await app.close();
+  });
+
+  it("fails clearly when OpenRouter is unavailable instead of pretending to improve the draft", async () => {
+    const app = buildApp({
+      correctGrammar: async () => {
+        throw new Error("provider unavailable");
+      },
+    });
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/assist",
+      payload: {
+        title: "nje titull",
+        problem: "ka shume hapesira ketu",
+        proposedChange: "duhet ta rregullojme kete pjese",
+        locale: "sq",
+      },
+    });
+    expect(response.statusCode).toBe(502);
+    expect(response.json()).toEqual({ error: "grammar_assistant_unavailable" });
     await app.close();
   });
 

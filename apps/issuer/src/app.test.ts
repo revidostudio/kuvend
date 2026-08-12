@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildApp } from "./app.js";
-import type { OtpProvider } from "./otp-provider.js";
+import { OtpProviderError, type OtpProvider } from "./otp-provider.js";
 import { MemoryChallengeStore } from "./challenge-store.js";
 
 const identityCommitment = "123456789";
@@ -203,6 +203,60 @@ describe("isolated issuer", () => {
     expect(limited.statusCode).toBe(429);
     expect(limited.headers["retry-after"]).toBeTruthy();
     expect(starts).toBe(3);
+    await app.close();
+  });
+
+  it.each([
+    ["verification_provider_unavailable", 503],
+    ["verification_unavailable", 400],
+    ["too_many_verification_requests", 429],
+  ] as const)("preserves the safe provider error %s", async (publicCode, statusCode) => {
+    const provider: OtpProvider = {
+      id: "sentdm",
+      sendsRealMessages: true,
+      async start() {
+        throw new OtpProviderError(publicCode, statusCode);
+      },
+      async check() {
+        return "valid";
+      },
+    };
+    const app = buildApp({ provider, allowDevelopmentParticipation: true });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/otp/start",
+      payload: { phone: "+355691234567", identityCommitment },
+    });
+
+    expect(response.statusCode).toBe(statusCode);
+    expect(response.json()).toEqual({ error: publicCode });
+    expect(response.body).not.toContain("+355691234567");
+    await app.close();
+  });
+
+  it("does not create a challenge when Sent rejects delivery", async () => {
+    const store = new MemoryChallengeStore();
+    const provider: OtpProvider = {
+      id: "sentdm",
+      sendsRealMessages: true,
+      async start() {
+        throw new OtpProviderError("verification_unavailable", 400);
+      },
+      async check() {
+        return "valid";
+      },
+    };
+    const app = buildApp({ provider, store, allowDevelopmentParticipation: true });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/otp/start",
+      payload: { phone: "+355691234567", identityCommitment },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(await store.activeCommitments()).toEqual([]);
     await app.close();
   });
 });

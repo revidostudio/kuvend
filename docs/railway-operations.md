@@ -45,6 +45,8 @@ node .agents/skills/railway-kuvendi/scripts/configure.mjs --apply --activate-con
 
 `web`, `civic-api`, `issuer`, and all databases remain always on. `assistant`, `notifications`, and `admin` may sleep after inactivity. Railway serverless sleeping is a container pause with a cold start, not a function runtime.
 
+The `assistant` service uses `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `OPENROUTER_PRESET`, and `OPENROUTER_BASE_URL` for optional Albanian grammar and spelling correction. The privacy preset identifier `@preset/gdpr-and-zdr` does not select a model, so requests send `OPENROUTER_MODEL=google/gemini-2.5-flash-lite` together with `OPENROUTER_PRESET=gdpr-and-zdr`. The request also requires ZDR at request time as a second routing constraint. Keep the key sealed in Railway. Placeholder values leave assistance unavailable and must produce an explicit UI error rather than a simulated correction.
+
 All services run one replica in EU West. Current measured memory is below 200 MB per application and 115 MB per database, so the demo caps are 0.5 GB for web and 0.25 GB for each Fastify/Postgres service. Reassess caps after load testing and before public promotion.
 
 ## Networking and domains

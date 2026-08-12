@@ -3,6 +3,7 @@ import { assistDraftSchema } from "@kuvend/contracts";
 import { assertCivicSafe } from "@kuvend/privacy-testkit";
 import Fastify from "fastify";
 import { z } from "zod";
+import { correctAlbanianGrammar, openRouterConfigured, OpenRouterError } from "./openrouter.js";
 
 const duplicateSchema = z
   .object({ title: z.string().max(140), problem: z.string().max(3_000) })
@@ -55,13 +56,12 @@ async function searchableProposals(civicApiUrl?: string): Promise<SearchProposal
   }
 }
 
-function clean(value: string): string {
-  const normalized = value.replace(/\s+/g, " ").trim();
-  if (!normalized) return normalized;
-  return `${normalized.charAt(0).toLocaleUpperCase("sq-AL")}${normalized.slice(1).replace(/\s+([,.!?])/g, "$1")}${/[.!?]$/.test(normalized) ? "" : "."}`;
-}
-
-export function buildApp(options: { civicApiUrl?: string } = {}) {
+export function buildApp(
+  options: {
+    civicApiUrl?: string;
+    correctGrammar?: typeof correctAlbanianGrammar;
+  } = {},
+) {
   const app = Fastify({ logger: false, bodyLimit: 16_000 });
   const configuredOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? "")
     .split(",")
@@ -75,24 +75,37 @@ export function buildApp(options: { civicApiUrl?: string } = {}) {
     ],
     methods: ["GET", "POST"],
   });
-  app.get("/health", async () => ({ ok: true, retention: "none" }));
+  app.get("/health", async () => ({
+    ok: true,
+    retention: "none",
+    grammarProvider: "openrouter",
+    grammarConfigured: openRouterConfigured(),
+  }));
 
   app.post("/v1/assist", async (request, reply) => {
     const parsed = assistDraftSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: "invalid_draft" });
     assertCivicSafe(parsed.data);
-    return {
-      original: parsed.data,
-      suggestion: {
-        title: clean(parsed.data.title).replace(/[.!?]$/, ""),
-        problem: clean(parsed.data.problem),
-        proposedChange: clean(parsed.data.proposedChange),
-      },
-      changes: ["Drejtshkrimi dhe hapësirat u rregulluan.", "Kuptimi politik nuk është ndryshuar."],
-      requiresApproval: true,
-      retained: false,
-      assisted: true,
-    };
+    try {
+      const corrected = await (options.correctGrammar ?? correctAlbanianGrammar)(parsed.data);
+      return {
+        original: parsed.data,
+        suggestion: {
+          title: corrected.title,
+          problem: corrected.problem,
+          proposedChange: corrected.proposedChange,
+        },
+        changes: corrected.changes,
+        requiresApproval: true,
+        retained: false,
+        assisted: true,
+        provider: "openrouter",
+      };
+    } catch (error) {
+      if (error instanceof OpenRouterError && error.code === "not_configured")
+        return reply.code(503).send({ error: "grammar_assistant_not_configured" });
+      return reply.code(502).send({ error: "grammar_assistant_unavailable" });
+    }
   });
 
   app.post("/v1/duplicates", async (request, reply) => {

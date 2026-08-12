@@ -72,6 +72,10 @@ export function PhoneNumberField({
       <Combobox
         items={countries}
         value={country}
+        itemToStringLabel={(option: PhoneCountryOption) =>
+          `${option.label} (+${option.callingCode})`
+        }
+        itemToStringValue={(option: PhoneCountryOption) => option.value}
         onValueChange={(option) => {
           if (option) onCountryChange(option);
         }}
@@ -94,7 +98,7 @@ export function PhoneNumberField({
               <ComboboxList>
                 {(option: PhoneCountryOption) => (
                   <ComboboxItem key={option.value} value={option}>
-                    <span className="flex min-w-0 items-center justify-between gap-3">
+                    <span className="flex w-full min-w-0 items-center justify-between gap-3">
                       <span className="truncate">{option.label}</span>
                       <span className="shrink-0 text-[var(--kuvend-ink-soft)]">
                         +{option.callingCode}
