@@ -21,16 +21,6 @@ import {
   Button,
   CheckboxField,
   ChoiceButton,
-  Combobox,
-  ComboboxEmpty,
-  ComboboxInput,
-  ComboboxInputGroup,
-  ComboboxItem,
-  ComboboxList,
-  ComboboxPopup,
-  ComboboxPortal,
-  ComboboxPositioner,
-  ComboboxTrigger,
   Dialog as ShadDialog,
   DialogContent,
   DialogDescription,
@@ -45,6 +35,7 @@ import {
   Input,
   Label,
   NativeSelect,
+  PhoneNumberField,
   Progress,
   ProgressLabel,
   ProgressValue,
@@ -100,7 +91,7 @@ import {
   type DisplayPreference,
 } from "../features/kuvend/display-preference";
 import { extractProposalId, proposalPath } from "./proposal-url";
-import { countryLabel, internationalPhone, phoneCountries } from "../features/kuvend/phone-number";
+import { internationalPhone, phoneCountries } from "../features/kuvend/phone-number";
 
 const civicUrl = process.env.NEXT_PUBLIC_CIVIC_API_URL ?? "http://localhost:4000";
 const issuerUrl = process.env.NEXT_PUBLIC_ISSUER_URL ?? "http://localhost:4001";
@@ -118,7 +109,8 @@ const categoryLabels: Record<string, string> = {
 };
 const countryOptions = phoneCountries.map((option) => ({
   value: option.country,
-  label: `${option.label} (+${option.callingCode})`,
+  label: option.label,
+  callingCode: option.callingCode,
 }));
 
 type Dialog =
@@ -1434,55 +1426,27 @@ function OtpDialog({
       {!challenge ? (
         <FieldGroup>
           <Field>
-            <Label htmlFor="otp-country">Shteti dhe kodi</Label>
-            <Combobox
-              items={countryOptions}
-              value={countryOptions.find((option) => option.value === country) ?? countryOptions[0]}
-              onValueChange={(option) => {
-                if (option) setCountry(option.value as CountryCode);
+            <Label htmlFor="otp-phone">Numri i WhatsApp</Label>
+            <PhoneNumberField
+              countries={countryOptions}
+              country={
+                countryOptions.find((option) => option.value === country) ?? countryOptions[0]!
+              }
+              onCountryChange={(option) => setCountry(option.value as CountryCode)}
+              phoneInputProps={{
+                id: "otp-phone",
+                value: nationalNumber,
+                onChange: (event) => setNationalNumber(event.target.value),
+                inputMode: "tel",
+                autoComplete: "tel-national",
+                placeholder: country === "AL" ? "069 123 4567" : "Numri i telefonit",
+                autoFocus: true,
+                "aria-describedby": "otp-phone-description",
               }}
-            >
-              <ComboboxInputGroup>
-                <ComboboxInput
-                  id="otp-country"
-                  autoComplete="country"
-                  placeholder="Kërko shtetin ose kodin"
-                />
-                <ComboboxTrigger aria-label="Hap listën e shteteve" />
-              </ComboboxInputGroup>
-              <ComboboxPortal>
-                <ComboboxPositioner>
-                  <ComboboxPopup>
-                    <ComboboxEmpty>Nuk u gjet asnjë shtet.</ComboboxEmpty>
-                    <ComboboxList>
-                      {(option: (typeof countryOptions)[number]) => (
-                        <ComboboxItem key={option.value} value={option}>
-                          {option.label}
-                        </ComboboxItem>
-                      )}
-                    </ComboboxList>
-                  </ComboboxPopup>
-                </ComboboxPositioner>
-              </ComboboxPortal>
-            </Combobox>
-            <FieldDescription>
-              Sugjerohet nga kodi i shtetit që dërgon Cloudflare; nuk ruhet me formularin. Mund ta
-              ndryshosh.
-            </FieldDescription>
-          </Field>
-          <Field>
-            <Label htmlFor="otp-phone">Numri në {countryLabel(country)}</Label>
-            <Input
-              id="otp-phone"
-              value={nationalNumber}
-              onChange={(event) => setNationalNumber(event.target.value)}
-              inputMode="tel"
-              autoComplete="tel-national"
-              placeholder={country === "AL" ? "069 123 4567" : "Numri pa kodin e shtetit"}
-              autoFocus
             />
-            <FieldDescription>
-              Kodi dërgohet vetëm në WhatsApp. Nuk ka SMS rezervë.
+            <FieldDescription id="otp-phone-description">
+              Kërko shtetin te menuja e kodit. Sugjerimi nga vendndodhja nuk ruhet. Kodi dërgohet
+              vetëm në WhatsApp përmes Sent.
             </FieldDescription>
           </Field>
           <Button className="full" disabled={submitting || !identity} onClick={() => void start()}>

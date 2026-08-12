@@ -14,5 +14,8 @@ describe("international phone formatting", () => {
   it("provides an accessible country label and a complete country list", () => {
     expect(countryLabel("AL")).toContain("+355");
     expect(phoneCountries.length).toBeGreaterThan(200);
+    expect(phoneCountries.find(({ country }) => country === "US")?.label).toContain(
+      "Shtetet e Bashkuara",
+    );
   });
 });

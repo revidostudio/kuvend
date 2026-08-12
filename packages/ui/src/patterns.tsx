@@ -24,18 +24,99 @@ import {
   buttonVariants,
   Card,
   CardContent,
+  Combobox,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxInputGroup,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxPopup,
+  ComboboxPortal,
+  ComboboxPositioner,
+  ComboboxTrigger,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  Input,
   Progress,
   ProgressLabel,
   ProgressValue,
 } from "./primitives";
 import { cn } from "./lib";
 
+export type PhoneCountryOption = {
+  value: string;
+  label: string;
+  callingCode: string;
+};
+
+export function PhoneNumberField({
+  countries,
+  country,
+  onCountryChange,
+  phoneInputProps,
+}: {
+  countries: PhoneCountryOption[];
+  country: PhoneCountryOption;
+  onCountryChange: (country: PhoneCountryOption) => void;
+  phoneInputProps: React.ComponentProps<typeof Input>;
+}) {
+  return (
+    <div
+      data-slot="phone-number-field"
+      className="flex min-h-12 w-full rounded-md border border-[var(--kuvend-border-strong)] bg-[var(--kuvend-surface-raised)] outline-none focus-within:border-[var(--kuvend-focus)] focus-within:ring-3 focus-within:ring-[var(--kuvend-focus)]/20"
+    >
+      <Combobox
+        items={countries}
+        value={country}
+        onValueChange={(option) => {
+          if (option) onCountryChange(option);
+        }}
+      >
+        <ComboboxInputGroup className="w-[46%] min-w-0 shrink-0 sm:w-48">
+          <ComboboxInput
+            aria-label="Shteti dhe kodi telefonik"
+            autoComplete="country"
+            className="h-12 min-h-12 truncate rounded-r-none border-0 bg-transparent pr-10 font-semibold focus-visible:border-0 focus-visible:ring-0"
+          />
+          <ComboboxTrigger
+            aria-label="Kërko ose ndrysho shtetin"
+            className="h-12 min-h-12 rounded-r-none"
+          />
+        </ComboboxInputGroup>
+        <ComboboxPortal>
+          <ComboboxPositioner>
+            <ComboboxPopup className="min-w-72">
+              <ComboboxEmpty>Nuk u gjet asnjë shtet.</ComboboxEmpty>
+              <ComboboxList>
+                {(option: PhoneCountryOption) => (
+                  <ComboboxItem key={option.value} value={option}>
+                    <span className="flex min-w-0 items-center justify-between gap-3">
+                      <span className="truncate">{option.label}</span>
+                      <span className="shrink-0 text-[var(--kuvend-ink-soft)]">
+                        +{option.callingCode}
+                      </span>
+                    </span>
+                  </ComboboxItem>
+                )}
+              </ComboboxList>
+            </ComboboxPopup>
+          </ComboboxPositioner>
+        </ComboboxPortal>
+      </Combobox>
+      <Input
+        {...phoneInputProps}
+        className={cn(
+          "h-12 min-h-12 min-w-0 rounded-l-none border-0 border-l border-l-[var(--kuvend-border)] bg-transparent focus-visible:border-l-[var(--kuvend-border)] focus-visible:ring-0",
+          phoneInputProps.className,
+        )}
+      />
+    </div>
+  );
+}
 export type PublicNavigationSection = "proposals" | "how" | "trust";
 
 const publicNavigation = [

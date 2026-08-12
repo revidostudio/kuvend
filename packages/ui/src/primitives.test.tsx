@@ -23,6 +23,7 @@ import {
   Input,
   Label,
   NativeSelect,
+  PhoneNumberField,
   ProposalCard,
   PublicSiteFooter,
   PublicSiteHeader,
@@ -108,6 +109,26 @@ describe("Kuvend UI", () => {
     fireEvent.change(input, { target: { value: "Itali" } });
     expect(await screen.findByRole("option", { name: "Itali (+39)" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "Gjermani (+49)" })).not.toBeInTheDocument();
+  });
+  it("combines a readable country picker and phone input into one field", async () => {
+    const countries = [
+      { value: "AL", label: "Shqipëri", callingCode: "355" },
+      { value: "US", label: "Shtetet e Bashkuara", callingCode: "1" },
+    ];
+    render(
+      <PhoneNumberField
+        countries={countries}
+        country={countries[0]!}
+        onCountryChange={() => undefined}
+        phoneInputProps={{ id: "phone", "aria-label": "Numri i WhatsApp" }}
+      />,
+    );
+    expect(screen.getByLabelText("Shteti dhe kodi telefonik")).toHaveValue("Shqipëri");
+    expect(screen.getByLabelText("Numri i WhatsApp")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Kërko ose ndrysho shtetin" }));
+    expect(
+      await screen.findByRole("option", { name: "Shtetet e Bashkuara +1" }),
+    ).toBeInTheDocument();
   });
   it("keeps file selection uncontrolled and exposes preview progress", () => {
     const file = new File(["pamje"], "stacioni.png", { type: "image/png" });

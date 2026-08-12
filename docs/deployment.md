@@ -26,7 +26,7 @@ The launch gate requires an independent issuer operator, independent cryptograph
 
 ## OTP provider selection
 
-The issuer uses an `OTP_PROVIDER` adapter. `development` is local-only. Production uses `sentdm` for WhatsApp OTP and requires `SENTDM_API_KEY`, `SENTDM_TEMPLATE_ID`, and `SENTDM_OTP_KEY` only inside the issuer trust domain. The older `prelude` adapter remains inactive and is not part of the WhatsApp-only launch path.
+The issuer uses an `OTP_PROVIDER` adapter. `development` is local-only. Sent is the only real-delivery provider: production uses `OTP_PROVIDER=sentdm` for WhatsApp OTP and requires `SENTDM_API_KEY`, `SENTDM_TEMPLATE_ID`, and `SENTDM_OTP_KEY` only inside the issuer trust domain. Prelude is not supported.
 
 The Sent adapter generates a six-digit code inside the isolated issuer and sends only the E.164 phone number, approved template ID, code and the explicit `whatsapp` channel to Sent. It does not send civic identifiers, proposal or voting-round identifiers, IP/device signals, frontend dispatch identifiers, names or cross-service correlation IDs. It does not register a webhook or retain Sent message IDs. The client repeats the phone number during the code check so the issuer stores only a rotating keyed phone digest and HMAC of the short-lived OTP between requests; plaintext phone numbers and OTPs are not placed in challenge state, logs, databases or backups.
 
