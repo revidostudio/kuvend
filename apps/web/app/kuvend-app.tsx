@@ -1381,10 +1381,10 @@ function OtpDialog({
             data.error === "verification_provider_unavailable"
             ? "Shërbimi i verifikimit është përkohësisht i padisponueshëm. Numri yt nuk është problemi; provo përsëri pas pak."
             : data.error === "verification_blocked" ||
-            data.error === "too_many_attempts" ||
-            data.error === "too_many_verification_requests"
-            ? "Nuk mund të dërgohet një kod tani. Provo përsëri më vonë."
-            : "WhatsApp nuk mund ta marrë kodin tani. Kontrollo numrin ose provo më vonë.",
+                data.error === "too_many_attempts" ||
+                data.error === "too_many_verification_requests"
+              ? "Nuk mund të dërgohet një kod tani. Provo përsëri më vonë."
+              : "WhatsApp nuk mund ta marrë kodin tani. Kontrollo numrin ose provo më vonë.",
         );
         return;
       }

@@ -476,9 +476,7 @@ test("mobile vote completes OTP, final confirmation, result and receipt", async 
   expect(String(otpStartPayload?.identityCommitment)).toMatch(/^\d+$/);
 });
 
-test("country hint is ephemeral and the full country list is searchable", async ({
-  page,
-}) => {
+test("country hint is ephemeral and the full country list is searchable", async ({ page }) => {
   let countryRequest: { method: string; postData: string | null } | undefined;
   await page.route("**/api/country", async (route) => {
     countryRequest = {
