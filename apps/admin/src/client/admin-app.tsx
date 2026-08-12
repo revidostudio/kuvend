@@ -79,7 +79,7 @@ export function AdminApp() {
             <p className="font-bold tracking-tight">Kuvend</p>
             <p className="text-xs text-[var(--kuvend-ink-soft)]">Moderimi · zonë e izoluar</p>
           </div>
-          <Badge className="ml-auto">Beta sintetike</Badge>
+          <Badge className="ml-auto">Beta eksperimentale</Badge>
         </div>
       </header>
       <main className="mx-auto grid max-w-6xl gap-6 px-4 py-6 sm:px-6 sm:py-8">
@@ -95,7 +95,7 @@ export function AdminApp() {
           <CardHeader>
             <CardTitle>Hyrja e moderatorit</CardTitle>
             <CardDescription>
-              Autentikimi me çelës është vetëm për demonstrimin sintetik.
+              Autentikimi me çelës përdoret vetëm për panelin e izoluar të administrimit.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-end">

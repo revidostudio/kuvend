@@ -26,8 +26,12 @@ export interface CivicStore {
   kind: "memory" | "postgres";
   list(): Promise<ProposalRecord[]>;
   get(id: string): Promise<ProposalRecord | undefined>;
-  create(input: CreateProposalInput): Promise<{ proposal: ProposalRecord }>;
-  addArgument(input: CreateArgumentInput): Promise<ArgumentRecord>;
+  create(
+    input: CreateProposalInput & { submissionNullifier: string },
+  ): Promise<{ proposal: ProposalRecord }>;
+  addArgument(
+    input: CreateArgumentInput & { contributionNullifier: string },
+  ): Promise<ArgumentRecord>;
   vote(input: VoteRecord): Promise<{ support: number; oppose: number; turnout: number }>;
   revise(
     id: string,
@@ -73,6 +77,7 @@ export class MemoryCivicStore implements CivicStore {
   private proposals = structuredClone(seedProposals);
   private votes: VoteRecord[] = [];
   private contributionNullifiers = new Set<string>();
+  private proposalNullifiers = new Set<string>();
   private capabilityHashes = new Map<string, string>();
   private moderationCases: ModerationCaseRecord[] = [];
 
@@ -85,7 +90,9 @@ export class MemoryCivicStore implements CivicStore {
     return proposal ? structuredClone(proposal) : undefined;
   }
 
-  async create(input: CreateProposalInput) {
+  async create(input: CreateProposalInput & { submissionNullifier: string }) {
+    if (this.proposalNullifiers.has(input.submissionNullifier))
+      throw new Error("duplicate_submission");
     const now = new Date().toISOString();
     const proposal: ProposalRecord = {
       id: randomUUID(),
@@ -105,6 +112,7 @@ export class MemoryCivicStore implements CivicStore {
       statusHistory: [{ status: "pending_review", at: now, note: "U dorëzua për shqyrtim." }],
     };
     this.proposals.unshift(proposal);
+    this.proposalNullifiers.add(input.submissionNullifier);
     this.capabilityHashes.set(proposal.id, input.authorCapabilityHash);
     this.moderationCases.unshift({
       id: randomUUID(),
@@ -118,7 +126,9 @@ export class MemoryCivicStore implements CivicStore {
     return { proposal: structuredClone(proposal) };
   }
 
-  async addArgument(input: CreateArgumentInput): Promise<ArgumentRecord> {
+  async addArgument(
+    input: CreateArgumentInput & { contributionNullifier: string },
+  ): Promise<ArgumentRecord> {
     const proposal = this.proposals.find((item) => item.id === input.proposalId);
     if (!proposal) throw new Error("proposal_not_found");
     if (proposal.status !== "voting_open") throw new Error("discussion_not_open");
@@ -157,10 +167,9 @@ export class MemoryCivicStore implements CivicStore {
     this.votes.push(input);
     proposal.votingRound.turnout += 1;
     const roundVotes = this.votes.filter((vote) => vote.roundId === input.roundId);
-    const seededTurnout = proposal.votingRound.turnout - roundVotes.length;
-    const seededSupport = Math.round(seededTurnout * 0.64);
-    const support = seededSupport + roundVotes.filter((vote) => vote.choice === "support").length;
-    const turnout = proposal.votingRound.turnout;
+    const support = roundVotes.filter((vote) => vote.choice === "support").length;
+    const turnout = roundVotes.length;
+    proposal.votingRound.turnout = turnout;
     return { support, oppose: turnout - support, turnout };
   }
 
@@ -343,14 +352,11 @@ export class MemoryCivicStore implements CivicStore {
         continue;
       }
       const roundVotes = this.votes.filter((vote) => vote.roundId === proposal.votingRound?.id);
-      const seededTurnout = proposal.votingRound.turnout - roundVotes.length;
-      const support =
-        Math.round(seededTurnout * 0.64) +
-        roundVotes.filter((vote) => vote.choice === "support").length;
+      const support = roundVotes.filter((vote) => vote.choice === "support").length;
       proposal.closedResult = {
-        turnout: proposal.votingRound.turnout,
+        turnout: roundVotes.length,
         support,
-        oppose: proposal.votingRound.turnout - support,
+        oppose: roundVotes.length - support,
         closedAt: now.toISOString(),
       };
       proposal.status = "voting_closed";

@@ -11,7 +11,8 @@ import {
   reviseProposalSchema,
   withdrawProposalSchema,
 } from "@kuvend/contracts";
-import { verifySyntheticCredential } from "@kuvend/credential";
+import { actionScope, voteMessage } from "@kuvend/credential/anonymous";
+import { verifyAnonymousProof } from "@kuvend/credential/server";
 import { assertCivicSafe } from "@kuvend/privacy-testkit";
 import Fastify from "fastify";
 import type { CivicStore } from "./store.js";
@@ -19,12 +20,22 @@ import { ballotReceipt } from "./store.js";
 
 export function buildApp(
   store: CivicStore,
-  options: { allowSyntheticParticipation?: boolean } = {},
+  options: {
+    participationOpen?: boolean;
+    membershipPublicKey?: string;
+    verifyParticipationProof?: typeof verifyAnonymousProof;
+  } = {},
 ) {
   const app = Fastify({ logger: false, bodyLimit: 32_000 });
-  const syntheticParticipationAllowed =
-    options.allowSyntheticParticipation ?? process.env.ALLOW_SYNTHETIC_PARTICIPATION === "true";
-  const signingKey = process.env.SYNTHETIC_SIGNING_KEY ?? "development-only-change-me";
+  const membershipPublicKey =
+    options.membershipPublicKey ??
+    (process.env.ISSUER_MEMBERSHIP_PUBLIC_KEY_B64
+      ? Buffer.from(process.env.ISSUER_MEMBERSHIP_PUBLIC_KEY_B64, "base64").toString("utf8")
+      : "");
+  const participationOpen =
+    (options.participationOpen ?? process.env.PARTICIPATION_OPEN === "true") &&
+    Boolean(membershipPublicKey);
+  const proofVerifier = options.verifyParticipationProof ?? verifyAnonymousProof;
   const transparencyKey = process.env.TRANSPARENCY_SIGNING_KEY ?? "development-transparency-key";
   const configuredOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? "")
     .split(",")
@@ -42,8 +53,8 @@ export function buildApp(
 
   app.get("/health", async () => ({
     ok: true,
-    syntheticOnly: true,
-    participationOpen: syntheticParticipationAllowed,
+    credentialProtocol: "semaphore-v4",
+    participationOpen,
     store: store.kind,
   }));
   app.get("/v1/proposals", async () => {
@@ -62,17 +73,32 @@ export function buildApp(
   });
 
   app.post("/v1/proposals", async (request, reply) => {
-    if (!syntheticParticipationAllowed) {
+    if (!participationOpen) {
       return reply.code(503).send({ error: "participation_not_available" });
     }
     const parsed = createProposalSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: "invalid_civic_payload" });
-    assertCivicSafe({ ...parsed.data, credential: undefined });
-    if (!verifySyntheticCredential(parsed.data.credential, signingKey)) {
-      return reply.code(401).send({ error: "invalid_synthetic_credential" });
+    assertCivicSafe(parsed.data);
+    const scope = await actionScope(`proposal:${parsed.data.authorCapabilityHash}`);
+    if (
+      !(await proofVerifier(
+        parsed.data.credentialProof,
+        { message: "1", scope },
+        membershipPublicKey,
+      ))
+    ) {
+      return reply.code(401).send({ error: "invalid_anonymous_proof" });
     }
-    const created = await store.create(parsed.data);
-    return reply.code(201).send({ ...created, syntheticOnly: true });
+    try {
+      const created = await store.create({
+        ...parsed.data,
+        submissionNullifier: parsed.data.credentialProof.proof.nullifier,
+      });
+      return reply.code(201).send(created);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "proposal_failed";
+      return reply.code(message.includes("duplicate") ? 409 : 400).send({ error: message });
+    }
   });
 
   app.post<{ Params: { id: string } }>("/v1/proposals/:id/revise", async (request, reply) => {
@@ -129,17 +155,29 @@ export function buildApp(
   });
 
   app.post("/v1/arguments", async (request, reply) => {
-    if (!syntheticParticipationAllowed) {
+    if (!participationOpen) {
       return reply.code(503).send({ error: "participation_not_available" });
     }
     const parsed = createArgumentSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: "invalid_civic_payload" });
-    assertCivicSafe({ ...parsed.data, credential: undefined });
-    if (!verifySyntheticCredential(parsed.data.credential, signingKey)) {
-      return reply.code(401).send({ error: "invalid_synthetic_credential" });
+    assertCivicSafe(parsed.data);
+    const scope = await actionScope(`argument:${parsed.data.proposalId}:${parsed.data.position}`);
+    if (
+      !(await proofVerifier(
+        parsed.data.credentialProof,
+        { message: "1", scope },
+        membershipPublicKey,
+      ))
+    ) {
+      return reply.code(401).send({ error: "invalid_anonymous_proof" });
     }
     try {
-      return reply.code(201).send({ argument: await store.addArgument(parsed.data) });
+      return reply.code(201).send({
+        argument: await store.addArgument({
+          ...parsed.data,
+          contributionNullifier: parsed.data.credentialProof.proof.nullifier,
+        }),
+      });
     } catch (error) {
       return reply
         .code(409)
@@ -148,20 +186,27 @@ export function buildApp(
   });
 
   app.post("/v1/ballots", async (request, reply) => {
-    if (!syntheticParticipationAllowed) {
+    if (!participationOpen) {
       return reply.code(503).send({ error: "participation_not_available" });
     }
     const parsed = castBallotSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: "invalid_civic_payload" });
-    assertCivicSafe({ ...parsed.data, credential: undefined });
-    if (!verifySyntheticCredential(parsed.data.credential, signingKey)) {
-      return reply.code(401).send({ error: "invalid_synthetic_credential" });
+    assertCivicSafe(parsed.data);
+    const scope = await actionScope(`ballot:${parsed.data.roundId}`);
+    if (
+      !(await proofVerifier(
+        parsed.data.credentialProof,
+        { message: voteMessage(parsed.data.choice), scope },
+        membershipPublicKey,
+      ))
+    ) {
+      return reply.code(401).send({ error: "invalid_anonymous_proof" });
     }
     try {
       const acceptedAt = new Date().toISOString();
       const result = await store.vote({
         roundId: parsed.data.roundId,
-        nullifier: parsed.data.nullifier,
+        nullifier: parsed.data.credentialProof.proof.nullifier,
         choice: parsed.data.choice,
         commitment: parsed.data.receiptCommitment,
         receivedAt: acceptedAt,
@@ -172,7 +217,6 @@ export function buildApp(
         commitment: parsed.data.receiptCommitment,
         result,
         advisory: true,
-        syntheticOnly: true,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "vote_failed";
@@ -259,14 +303,14 @@ export function buildApp(
         .update(JSON.stringify(proposal.statusHistory))
         .digest("hex"),
       sourceRevision: process.env.SOURCE_REVISION ?? "development",
-      keyEpoch: process.env.TRANSPARENCY_KEY_EPOCH ?? "synthetic-v1",
+      keyEpoch: process.env.TRANSPARENCY_KEY_EPOCH ?? "v1",
     };
     return {
       ...metadata,
       signature: createHmac("sha256", transparencyKey)
         .update(JSON.stringify(metadata))
         .digest("base64url"),
-      syntheticSignature: true,
+      signatureAlgorithm: "hmac-sha256",
     };
   });
 

@@ -18,9 +18,8 @@ export default function TermsPage() {
       alternate={{ href: "/en/terms", label: "Read these terms in English" }}
     >
       <aside className="trust-status" aria-label="Statusi i kushteve">
-        <strong>Draft për shqyrtim ligjor.</strong> Shërbimi publik mbetet beta sintetike. Këto
-        kushte bëhen përfundimtare vetëm pas shqyrtimit ligjor dhe para pranimit të pjesëmarrjes
-        reale.
+        <strong>Beta eksperimentale.</strong> Këto kushte zbatohen për pjesëmarrjen aktuale me
+        WhatsApp dhe prova anonime. Ndryshimet materiale publikohen me datë dhe njoftim të dukshëm.
       </aside>
 
       <h2>1. Operatori dhe pranimi</h2>
@@ -111,9 +110,9 @@ export default function TermsPage() {
 
       <h2>10. Ligji, ndryshimet dhe kontakti</h2>
       <p>
-        Ligji dhe gjykata kompetente për versionin përfundimtar do të konfirmohen nga shqyrtimi
-        ligjor duke marrë parasysh operatorin amerikan, shërbimin në Shqipëri dhe të drejtat e
-        detyrueshme të përdoruesve. Ky draft nuk zgjedh një forum që mund të kufizojë ato të drejta.
+        Këto kushte nuk kufizojnë të drejtat e detyrueshme që të takojnë sipas ligjit në fuqi.
+        Çështjet e juridiksionit vlerësohen duke marrë parasysh operatorin amerikan, shërbimin në
+        Shqipëri dhe mbrojtjet e detyrueshme të përdoruesve.
       </p>
       <p>
         Ndryshimet materiale publikohen me datë të re dhe njoftim të dukshëm. Për pyetje ligjore

@@ -69,11 +69,10 @@ services:
       dockerfile: apps/civic-api/Dockerfile
     environment:
       PORT: 4000
-      SYNTHETIC_ONLY: "true"
-      ALLOW_SYNTHETIC_PARTICIPATION: "true"
-      SYNTHETIC_SIGNING_KEY: development-only-change-me
+      PARTICIPATION_OPEN: "true"
+      ISSUER_MEMBERSHIP_PUBLIC_KEY_B64: LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUNvd0JRWURLMlZ3QXlFQVdHZDhkUnkyWk9GUEFMKzRETm1zVmZJcE9xY1ZsOHZvb0crSlI2YnVmUms9Ci0tLS0tRU5EIFBVQkxJQyBLRVktLS0tLQo=
       TRANSPARENCY_SIGNING_KEY: development-transparency-key
-      TRANSPARENCY_KEY_EPOCH: synthetic-v1
+      TRANSPARENCY_KEY_EPOCH: development-v1
       DATABASE_URL: postgres://kuvend:kuvend@civic-db:5432/kuvend_civic
     ports:
       - "4000:4000"
@@ -87,11 +86,10 @@ services:
       dockerfile: apps/issuer/Dockerfile
     environment:
       PORT: 4001
-      SYNTHETIC_ONLY: "true"
-      ALLOW_SYNTHETIC_PARTICIPATION: "true"
-      SYNTHETIC_SIGNING_KEY: development-only-change-me
+      ALLOW_DEVELOPMENT_PARTICIPATION: "true"
+      ISSUER_MEMBERSHIP_PRIVATE_KEY_B64: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1DNENBUUF3QlFZREsyVndCQ0lFSUg5NmVVT0xKSTc0VHQzVVJxejFtMTBqNnA1bEJNQURpSDhBK2dweTFaOWQKLS0tLS1FTkQgUFJJVkFURSBLRVktLS0tLQo=
       ISSUER_DIGEST_KEY: development-digest-key
-      OTP_PROVIDER: synthetic
+      OTP_PROVIDER: development
       DATABASE_URL: postgres://kuvend:kuvend@issuer-db:5432/kuvend_issuer
     ports:
       - "4001:4001"
@@ -105,7 +103,6 @@ services:
       dockerfile: apps/assistant/Dockerfile
     environment:
       PORT: 4002
-      SYNTHETIC_ONLY: "true"
       CIVIC_API_URL: http://civic-api:4000
     ports:
       - "4002:4002"

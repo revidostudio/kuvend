@@ -75,7 +75,7 @@ export function buildApp(options: { civicApiUrl?: string } = {}) {
     ],
     methods: ["GET", "POST"],
   });
-  app.get("/health", async () => ({ ok: true, retention: "none", syntheticOnly: true }));
+  app.get("/health", async () => ({ ok: true, retention: "none" }));
 
   app.post("/v1/assist", async (request, reply) => {
     const parsed = assistDraftSchema.safeParse(request.body);
@@ -91,7 +91,7 @@ export function buildApp(options: { civicApiUrl?: string } = {}) {
       changes: ["Drejtshkrimi dhe hapësirat u rregulluan.", "Kuptimi politik nuk është ndryshuar."],
       requiresApproval: true,
       retained: false,
-      syntheticOnly: true,
+      assisted: true,
     };
   });
 

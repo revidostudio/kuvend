@@ -16,13 +16,13 @@ Exit condition: a written protocol and operational design with named assumptions
 - protocol test vectors and a minimal credential issuer;
 - privacy relay/gateway development setup;
 - civic proposal and vote services with separate databases;
-- synthetic SMS adapter only; no real identities;
+- local-only OTP adapter; no third-party message delivery;
 - privacy-boundary, log-scrubbing, duplicate-use, and failure-path tests;
 - a command that demonstrates the entire flow locally with fake data.
 
 Exit condition: automated tests show the intended separation, and the repository still states that the implementation is unaudited.
 
-Implemented in the repository: the complete proposal wizard, optional language review, live-catalogue duplicate suggestions, author recovery capabilities, structured evidence, moderation and appeals, arguments, 14-day rounds, final ballots, receipts, closing results, institutional responses, separate administrative audits, SEO/share surfaces, RSS and isolated push notifications. Credentials and public transparency signatures remain deliberately synthetic.
+Implemented in the repository: the complete proposal wizard, optional language review, live-catalogue duplicate suggestions, author recovery capabilities, structured evidence, moderation and appeals, arguments, 14-day rounds, final ballots, receipts, closing results, institutional responses, separate administrative audits, SEO/share surfaces, RSS, isolated push notifications, and Semaphore V4 membership proofs.
 
 ## Phase 2 — hardened pilot
 
