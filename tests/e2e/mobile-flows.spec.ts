@@ -260,10 +260,10 @@ function mobileOnly(width: number | undefined) {
 
 async function completeOtp(page: Page) {
   await expect(page.getByRole("heading", { name: "Verifiko me WhatsApp" })).toBeVisible();
-  await expect(page.getByRole("combobox", { name: "Shteti dhe kodi" })).toHaveValue(
-    "Shqipëri (+355)",
+  await expect(page.getByRole("combobox", { name: "Shteti dhe kodi telefonik" })).toHaveValue(
+    "Shqipëri",
   );
-  await page.getByLabel(/Numri në Shqipëri/).fill("069 123 4567");
+  await page.getByLabel("Numri i WhatsApp").fill("069 123 4567");
   await page.getByRole("button", { name: "Dërgo kodin në WhatsApp" }).click();
   await expect(page.getByText("Kontrollo WhatsApp")).toBeVisible();
   await page.getByLabel("Kodi gjashtëshifror").fill("123456");
@@ -472,11 +472,11 @@ test("country hint is ephemeral and the full country list is searchable", async 
   await page.goto("/");
   await page.locator(".proposal-card").first().click();
   await page.getByRole("button", { name: "Mbështes" }).click();
-  const country = page.getByRole("combobox", { name: "Shteti dhe kodi" });
-  await expect(country).toHaveValue("Itali (+39)");
+  const country = page.getByRole("combobox", { name: "Shteti dhe kodi telefonik" });
+  await expect(country).toHaveValue("Itali");
   await country.fill("Shqip");
-  await page.getByRole("option", { name: "Shqipëri (+355)" }).click();
-  await expect(country).toHaveValue("Shqipëri (+355)");
+  await page.getByRole("option", { name: "Shqipëri +355" }).click();
+  await expect(country).toHaveValue("Shqipëri");
   expect(countryRequest).toEqual({ method: "GET", postData: null });
 });
 
@@ -507,6 +507,16 @@ test("mobile proposal wizard can skip AI, verify, submit and show recovery secre
   await expect(page.getByRole("link", { name: "Plani vendor i gjelbërimit" })).toBeVisible();
   await page.getByRole("button", { name: "Pa ndihmë AI" }).click();
   await expect(page.getByRole("heading", { name: "Konfirmo propozimin" })).toBeVisible();
+  await expect(page.getByText("Kontrollo versionin përfundimtar")).toBeVisible();
+  const finalReview = page.locator(".final-review");
+  await expect(finalReview.getByText("Ndryshimi i propozuar", { exact: true })).toBeVisible();
+  await expect(finalReview.locator("section")).toHaveCount(6);
+  const finalReviewGeometry = await finalReview.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    return { left: rect.left, right: rect.right, viewport: window.innerWidth };
+  });
+  expect(finalReviewGeometry.left).toBeGreaterThanOrEqual(0);
+  expect(finalReviewGeometry.right).toBeLessThanOrEqual(finalReviewGeometry.viewport);
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Konfirmo dhe dorëzo" }).click();
 

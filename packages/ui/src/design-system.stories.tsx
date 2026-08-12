@@ -30,6 +30,7 @@ import {
   Input,
   Label,
   NativeSelect,
+  PhoneNumberField,
   ProposalCard,
   PublicSiteFooter,
   PublicSiteHeader,
@@ -100,6 +101,18 @@ export const Primitives: Story = {
             </ComboboxPositioner>
           </ComboboxPortal>
         </Combobox>
+      </Field>
+      <Field>
+        <Label htmlFor="story-phone">Numri i WhatsApp</Label>
+        <PhoneNumberField
+          countries={[
+            { value: "AL", label: "Shqipëri", callingCode: "355" },
+            { value: "US", label: "Shtetet e Bashkuara", callingCode: "1" },
+          ]}
+          country={{ value: "AL", label: "Shqipëri", callingCode: "355" }}
+          onCountryChange={() => undefined}
+          phoneInputProps={{ id: "story-phone", placeholder: "069 123 4567" }}
+        />
       </Field>
       <Field>
         <Label htmlFor="story-category">Kategoria</Label>

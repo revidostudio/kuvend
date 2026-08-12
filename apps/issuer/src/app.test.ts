@@ -92,7 +92,7 @@ describe("isolated issuer", () => {
   it("binds a challenge to the same phone without storing it in the response", async () => {
     let checked = false;
     const provider: OtpProvider = {
-      id: "prelude",
+      id: "sentdm",
       sendsRealMessages: true,
       async start() {},
       async check() {

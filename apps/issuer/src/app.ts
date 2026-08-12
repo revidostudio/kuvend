@@ -4,7 +4,6 @@ import { otpCheckSchema, otpStartSchema } from "@kuvend/contracts";
 import { createMembershipSnapshot } from "@kuvend/credential/server";
 import Fastify from "fastify";
 import { OtpProviderError, type OtpProvider } from "./otp-provider.js";
-import { PreludeOtpProvider } from "./prelude-provider.js";
 import { SentDmOtpProvider } from "./sentdm-provider.js";
 import { DevelopmentOtpProvider } from "./development-provider.js";
 import { MemoryChallengeStore, type ChallengeStore } from "./challenge-store.js";
@@ -15,13 +14,6 @@ function configuredProvider(): OtpProvider {
   // not enable development participation without the separate explicit flag.
   if (provider === "development" || provider === "synthetic") {
     return new DevelopmentOtpProvider();
-  }
-  if (provider === "prelude") {
-    return new PreludeOtpProvider({
-      apiKey: process.env.PRELUDE_API_KEY ?? "",
-      ...(process.env.PRELUDE_BASE_URL ? { baseUrl: process.env.PRELUDE_BASE_URL } : {}),
-      ...(process.env.PRELUDE_SENDER_ID ? { senderId: process.env.PRELUDE_SENDER_ID } : {}),
-    });
   }
   if (provider === "sentdm") {
     return new SentDmOtpProvider({
