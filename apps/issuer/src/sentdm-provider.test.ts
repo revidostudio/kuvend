@@ -85,6 +85,31 @@ describe("SentDmOtpProvider", () => {
     expect(fetchImpl.mock.calls[1]?.[0]).toBe("https://api.sent.dm/v3/messages/failed-message");
   });
 
+  it("sends an explicit SMS fallback without the WhatsApp template", async () => {
+    const fetchImpl = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      const request = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      expect(request).toMatchObject({
+        to: ["+17653987177"],
+        channel: ["sms"],
+        text: expect.stringMatching(/^Kodi yt i verifikimit për Kuvend është \d{6}/),
+        sandbox: false,
+      });
+      expect(request).not.toHaveProperty("template");
+      return new Response(JSON.stringify({ success: true }), { status: 202 });
+    });
+    const provider = new SentDmOtpProvider({
+      apiKey: "sk_test_example",
+      templateId: "otp-template",
+      verificationKey,
+      fetchImpl: fetchImpl as typeof fetch,
+    });
+
+    const started = await provider.start("+17653987177", "sms");
+
+    expect(started.verificationState).toMatch(/^[a-f0-9]{64}$/);
+    expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
   it("rejects placeholder credentials and missing template configuration", () => {
     expect(
       () =>

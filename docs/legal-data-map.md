@@ -37,8 +37,9 @@ representative is required.
 | browser             | user-entered phone, device-held credential, content draft, receipts and recovery secret | issuer keys, admin identity                           | user-controlled entry and local state                           |
 | web edge            | Cloudflare two-letter country header                                                    | application access to raw IP for country selection    | ephemeral country-code suggestion with no-store                 |
 | isolated issuer     | plaintext phone in request memory, keyed phone/OTP digests, issuance epoch              | proposal, argument, ballot, receipt, civic pseudonym  | rate-limited phone-control verification and anonymous issuance  |
-| Sent managed sender | phone, OTP template variables, delivery metadata                                        | civic content, ballot, receipt, recovery secret       | WhatsApp code delivery                                          |
+| Sent managed sender | phone, OTP template/text variables, delivery metadata                                   | civic content, ballot, receipt, recovery secret       | WhatsApp-first code delivery and user-selected SMS backup       |
 | Meta/WhatsApp       | phone, message and delivery metadata                                                    | civic content, ballot, receipt, recovery secret       | WhatsApp transport                                              |
+| Mobile carrier      | phone, SMS content and delivery metadata                                                | civic content, ballot, receipt, recovery secret       | SMS transport only after explicit participant selection         |
 | civic service       | public content, proof, scoped nullifier, ballot commitment                              | phone, OTP, identity session, stable participant ID   | proposals, arguments, advisory voting, receipts                 |
 | assistant           | explicitly supplied draft during the request                                            | phone, credential, ballot, receipt, capability secret | optional correction, simplification, transcription, translation |
 | notifications       | encrypted push subscription and chosen topics                                           | phone, vote, credential                               | opt-in notifications                                            |
@@ -56,7 +57,7 @@ representative is required.
 | independent relay           | source IP and encrypted padded request                                     | future independent operator; no content access                                                                 |
 
 Sent is not an identity provider for the civic service. Only the isolated issuer may call Sent.
-There is no browser SDK, webhook, device signal, SMS fallback, civic metadata, or retained Sent
+There is no browser SDK, webhook, device signal, silent SMS fallback, civic metadata, or retained Sent
 message ID in the reference integration. Adding channels, tracking, or provider features requires a
 new data-flow decision, updated DPIA, and updated public notice.
 

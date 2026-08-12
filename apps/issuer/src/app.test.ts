@@ -259,4 +259,36 @@ describe("isolated issuer", () => {
     expect(await store.activeCommitments()).toEqual([]);
     await app.close();
   });
+
+  it("passes an explicit SMS fallback to the provider without changing the privacy boundary", async () => {
+    let receivedChannel: string | undefined;
+    const provider: OtpProvider = {
+      id: "sentdm",
+      sendsRealMessages: true,
+      async start(_phone, deliveryChannel) {
+        receivedChannel = deliveryChannel;
+        return { verificationState: "a".repeat(64) };
+      },
+      async check() {
+        return "valid";
+      },
+    };
+    const app = buildApp({ provider, allowDevelopmentParticipation: true });
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/v1/otp/start",
+      payload: {
+        phone: "+17653987177",
+        identityCommitment,
+        deliveryChannel: "sms",
+      },
+    });
+
+    expect(response.statusCode).toBe(201);
+    expect(receivedChannel).toBe("sms");
+    expect(response.json().deliveryChannel).toBe("sms");
+    expect(response.body).not.toContain("+17653987177");
+    await app.close();
+  });
 });

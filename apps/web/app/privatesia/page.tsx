@@ -18,9 +18,10 @@ export default function PrivacyPage() {
       alternate={{ href: "/en/privacy", label: "Read this policy in English" }}
     >
       <aside className="trust-status" aria-label="Statusi i politikës">
-        <strong>Beta eksperimentale.</strong> Kjo politikë përshkruan verifikimin aktiv me WhatsApp,
-        anëtarësinë anonime me Semaphore dhe kufijtë aktualë të shërbimit. Vlerësimi i ndikimit,
-        marrëveshjet me përpunuesit dhe shqyrtimi i pavarur publikohen sapo përfundojnë.
+        <strong>Beta eksperimentale.</strong> Kjo politikë përshkruan verifikimin aktiv me WhatsApp
+        dhe rezervën me SMS të zgjedhur nga përdoruesi, anëtarësinë anonime me Semaphore dhe kufijtë
+        aktualë të shërbimit. Vlerësimi i ndikimit, marrëveshjet me përpunuesit dhe shqyrtimi i
+        pavarur publikohen sapo përfundojnë.
       </aside>
 
       <h2>1. Kush është përgjegjës</h2>
@@ -44,11 +45,12 @@ export default function PrivacyPage() {
         pjesëmarrësit.
       </p>
       <p>
-        Sent përdor dërguesin e vet të menaxhuar dhe, bashkë me WhatsApp/Meta, përpunon numrin dhe
-        të dhënat e dërgesës. Sent dhe Meta nuk marrin tekstin e propozimit, votën, argumentet,
-        mandatet e përfshirjes ose sekretet e rikuperimit. Operatori i shërbimit të verifikimit nuk
-        është ende i pavarur; prandaj Kuvend nuk pretendon se mirëmbajtësit teknikisht nuk mund ta
-        shohin numrin.
+        Sent përdor dërguesin e vet të menaxhuar dhe dërgon kodin me WhatsApp ose, vetëm kur e
+        zgjedh pjesëmarrësi pas një dështimi, me SMS. Sent, WhatsApp/Meta ose operatori celular
+        përpunojnë numrin dhe të dhënat e dërgesës. Ata nuk marrin tekstin e propozimit, votën,
+        argumentet, mandatet e përfshirjes ose sekretet e rikuperimit. Operatori i shërbimit të
+        verifikimit nuk është ende i pavarur; prandaj Kuvend nuk pretendon se mirëmbajtësit
+        teknikisht nuk mund ta shohin numrin.
       </p>
 
       <h2>3. Të dhënat, qëllimet dhe baza e propozuar</h2>
@@ -101,11 +103,11 @@ export default function PrivacyPage() {
       <h2>6. Marrësit dhe transferimet</h2>
       <p>
         Railway ofron infrastrukturën e aplikacionit dhe bazat e ndara; Cloudflare ofron DNS,
-        mbrojtje dhe shpërndarje; Sent dhe Meta/WhatsApp përdoren vetëm për dërgimin e kodit;
-        OpenRouter dhe ofruesi i modelit përdoren vetëm kur përdoruesi kërkon kontrollin opsional të
-        gramatikës dhe drejtshkrimit. Kërkesa kufizohet te drafti i zgjedhur dhe kërkon rrugëzim pa
-        ruajtje të të dhënave. Kuvend nuk shet të dhëna, nuk shfaq reklama dhe nuk ngarkon SDK
-        analitike ose gjurmimi në shfletues.
+        mbrojtje dhe shpërndarje; Sent, Meta/WhatsApp dhe operatori celular përdoren vetëm për
+        dërgimin e kodit në kanalin e zgjedhur; OpenRouter dhe ofruesi i modelit përdoren vetëm kur
+        përdoruesi kërkon kontrollin opsional të gramatikës dhe drejtshkrimit. Kërkesa kufizohet te
+        drafti i zgjedhur dhe kërkon rrugëzim pa ruajtje të të dhënave. Kuvend nuk shet të dhëna,
+        nuk shfaq reklama dhe nuk ngarkon SDK analitike ose gjurmimi në shfletues.
       </p>
       <p>
         Disa përpunues janë jashtë Shqipërisë. Revido LLC dokumenton marrëveshjet e përpunimit,

@@ -1,4 +1,5 @@
 export type OtpCheckResult = "valid" | "invalid" | "expired";
+export type OtpDeliveryChannel = "whatsapp" | "sms";
 
 export interface OtpStartResult {
   verificationState?: string;
@@ -7,7 +8,7 @@ export interface OtpStartResult {
 export interface OtpProvider {
   readonly id: "development" | "sentdm";
   readonly sendsRealMessages: boolean;
-  start(phone: string): Promise<OtpStartResult | void>;
+  start(phone: string, deliveryChannel?: OtpDeliveryChannel): Promise<OtpStartResult | void>;
   check(phone: string, code: string, verificationState?: string): Promise<OtpCheckResult>;
 }
 

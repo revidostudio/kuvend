@@ -1,5 +1,10 @@
 import { createHmac, randomInt, randomUUID, timingSafeEqual } from "node:crypto";
-import { OtpProviderError, type OtpCheckResult, type OtpProvider } from "./otp-provider.js";
+import {
+  OtpProviderError,
+  type OtpCheckResult,
+  type OtpDeliveryChannel,
+  type OtpProvider,
+} from "./otp-provider.js";
 
 type FetchLike = typeof fetch;
 
@@ -59,7 +64,7 @@ export class SentDmOtpProvider implements OtpProvider {
     this.waitImpl = options.waitImpl ?? wait;
   }
 
-  async start(phone: string) {
+  async start(phone: string, deliveryChannel: OtpDeliveryChannel = "whatsapp") {
     const code = randomInt(0, 1_000_000).toString().padStart(6, "0");
     let response: Response;
     try {
@@ -71,15 +76,24 @@ export class SentDmOtpProvider implements OtpProvider {
           "idempotency-key": randomUUID(),
           "x-api-key": this.options.apiKey,
         },
-        body: JSON.stringify({
-          to: [phone],
-          channel: ["whatsapp"],
-          template: {
-            id: this.options.templateId,
-            parameters: { [this.codeParameter]: code },
-          },
-          sandbox: false,
-        }),
+        body: JSON.stringify(
+          deliveryChannel === "sms"
+            ? {
+                to: [phone],
+                channel: ["sms"],
+                text: `Kodi yt i verifikimit për Kuvend është ${code}. Skadon pas 5 minutash.`,
+                sandbox: false,
+              }
+            : {
+                to: [phone],
+                channel: ["whatsapp"],
+                template: {
+                  id: this.options.templateId,
+                  parameters: { [this.codeParameter]: code },
+                },
+                sandbox: false,
+              },
+        ),
         signal: AbortSignal.timeout(8_000),
       });
     } catch {
