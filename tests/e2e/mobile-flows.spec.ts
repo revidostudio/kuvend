@@ -270,6 +270,30 @@ async function completeOtp(page: Page) {
   await page.getByRole("button", { name: "Verifiko dhe vazhdo" }).click();
 }
 
+test("OTP outage is identified as a service problem rather than an invalid phone", async ({
+  page,
+}) => {
+  await page.route("**/v1/otp/start", (route) =>
+    route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "verification_not_available" }),
+    }),
+  );
+
+  await page.goto("/");
+  await page.locator(".proposal-card").first().click();
+  await page.getByRole("button", { name: "Mbështes" }).click();
+  await page.getByLabel("Numri i WhatsApp").fill("069 123 4567");
+  await page.getByRole("button", { name: "Dërgo kodin në WhatsApp" }).click();
+
+  await expect(
+    page.getByText(
+      "Shërbimi i verifikimit është përkohësisht i padisponueshëm. Numri yt nuk është problemi; provo përsëri pas pak.",
+    ),
+  ).toBeVisible();
+});
+
 async function expectMobileSheet(page: Page) {
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();

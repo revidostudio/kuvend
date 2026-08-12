@@ -1377,7 +1377,10 @@ function OtpDialog({
       const data = await response.json();
       if (!response.ok) {
         setError(
-          data.error === "verification_blocked" ||
+          data.error === "verification_not_available" ||
+            data.error === "verification_provider_unavailable"
+            ? "Shërbimi i verifikimit është përkohësisht i padisponueshëm. Numri yt nuk është problemi; provo përsëri pas pak."
+            : data.error === "verification_blocked" ||
             data.error === "too_many_attempts" ||
             data.error === "too_many_verification_requests"
             ? "Nuk mund të dërgohet një kod tani. Provo përsëri më vonë."
