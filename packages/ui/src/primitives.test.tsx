@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import axe from "axe-core";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   Button,
   ChoiceButton,
@@ -30,6 +30,8 @@ import {
   SearchField,
   TrustNotice,
 } from "./index";
+
+afterEach(cleanup);
 
 describe("Kuvend UI", () => {
   it("keeps controls named and fields related", () => {
@@ -95,7 +97,11 @@ describe("Kuvend UI", () => {
               <ComboboxPopup>
                 <ComboboxEmpty>Nuk u gjet asnjë shtet.</ComboboxEmpty>
                 <ComboboxList>
-                  {(country: string) => <ComboboxItem value={country}>{country}</ComboboxItem>}
+                  {(country: string) => (
+                    <ComboboxItem key={country} value={country}>
+                      {country}
+                    </ComboboxItem>
+                  )}
                 </ComboboxList>
               </ComboboxPopup>
             </ComboboxPositioner>
@@ -106,6 +112,7 @@ describe("Kuvend UI", () => {
     const input = container.querySelector<HTMLInputElement>("#search-country");
     expect(input).not.toBeNull();
     if (!input) throw new Error("searchable combobox input missing");
+    fireEvent.click(screen.getByRole("button", { name: "Hap listën e shteteve" }));
     fireEvent.change(input, { target: { value: "Itali" } });
     expect(await screen.findByRole("option", { name: "Itali (+39)" })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "Gjermani (+49)" })).not.toBeInTheDocument();
@@ -137,6 +144,48 @@ describe("Kuvend UI", () => {
       target: { value: "355" },
     });
     expect(await screen.findByRole("option", { name: "Shqipëri +355" })).toBeVisible();
+  });
+  it("selects a searched country while keeping the calling code readable", async () => {
+    const onCountryChange = vi.fn();
+    const countries = [
+      { value: "AL", label: "Shqipëri", callingCode: "355" },
+      { value: "US", label: "Shtetet e Bashkuara", callingCode: "1" },
+    ];
+    const { container } = render(
+      <PhoneNumberField
+        countries={countries}
+        country={countries[0]!}
+        onCountryChange={onCountryChange}
+        phoneInputProps={{ id: "searchable-phone", "aria-label": "Numri i WhatsApp" }}
+      />,
+    );
+
+    const countryInput = within(container).getByLabelText("Shteti dhe kodi telefonik");
+    fireEvent.click(within(container).getByRole("button", { name: "Kërko ose ndrysho shtetin" }));
+    fireEvent.change(countryInput, { target: { value: "Bashkuara" } });
+    const option = await screen.findByRole("option", { name: "Shtetet e Bashkuara +1" });
+    fireEvent.click(option);
+
+    expect(onCountryChange).toHaveBeenCalledWith(countries[1]);
+  });
+
+  it("shows an accessible empty result for an unknown country search", async () => {
+    const countries = [{ value: "AL", label: "Shqipëri", callingCode: "355" }];
+    const { container } = render(
+      <PhoneNumberField
+        countries={countries}
+        country={countries[0]!}
+        onCountryChange={() => undefined}
+        phoneInputProps={{ id: "empty-phone", "aria-label": "Numri i WhatsApp" }}
+      />,
+    );
+
+    fireEvent.click(within(container).getByRole("button", { name: "Kërko ose ndrysho shtetin" }));
+    fireEvent.change(within(container).getByLabelText("Shteti dhe kodi telefonik"), {
+      target: { value: "Atlantida" },
+    });
+
+    expect(await screen.findByText("Nuk u gjet asnjë shtet.")).toBeVisible();
   });
   it("keeps file selection uncontrolled and exposes preview progress", () => {
     const file = new File(["pamje"], "stacioni.png", { type: "image/png" });

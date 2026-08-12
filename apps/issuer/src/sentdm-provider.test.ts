@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { SentDmOtpProvider } from "./sentdm-provider.js";
+import { OtpProviderError } from "./otp-provider.js";
 
 const verificationKey = "test-verification-key-with-at-least-32-characters";
 
@@ -75,5 +76,85 @@ describe("SentDmOtpProvider", () => {
     const started = await provider.start("+355691234567");
     expect(JSON.stringify(started)).not.toContain("+355691234567");
     expect(JSON.stringify(started)).not.toMatch(/"\d{6}"/);
+  });
+
+  it("uses the configured template parameter without sending civic identifiers", async () => {
+    const fetchImpl = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
+      const request = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      expect(request).toMatchObject({
+        channel: ["whatsapp"],
+        template: { id: "otp-template", parameters: { var_1: expect.stringMatching(/^\d{6}$/) } },
+        sandbox: false,
+      });
+      expect(JSON.stringify(request)).not.toMatch(
+        /identity|proposal|ballot|vote|receipt|capability|pseudonym/i,
+      );
+      return new Response(JSON.stringify({ success: true }), { status: 202 });
+    });
+    const provider = new SentDmOtpProvider({
+      apiKey: "sk_test_example",
+      templateId: "otp-template",
+      verificationKey,
+      codeParameter: "var_1",
+      fetchImpl: fetchImpl as typeof fetch,
+    });
+
+    await provider.start("+355691234567");
+    expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    [429, "too_many_verification_requests", 429],
+    [401, "verification_provider_unavailable", 503],
+    [403, "verification_provider_unavailable", 503],
+    [422, "verification_unavailable", 400],
+    [500, "verification_provider_unavailable", 503],
+  ] as const)("maps Sent HTTP %i to %s", async (providerStatus, publicCode, publicStatus) => {
+    const provider = new SentDmOtpProvider({
+      apiKey: "sk_test_example",
+      templateId: "otp-template",
+      verificationKey,
+      fetchImpl: (async () =>
+        new Response(JSON.stringify({ success: false }), {
+          status: providerStatus,
+        })) as typeof fetch,
+    });
+
+    await expect(provider.start("+355691234567")).rejects.toMatchObject({
+      name: "OtpProviderError",
+      publicCode,
+      statusCode: publicStatus,
+    } satisfies Partial<OtpProviderError>);
+  });
+
+  it("fails closed on a successful HTTP response without a success envelope", async () => {
+    const provider = new SentDmOtpProvider({
+      apiKey: "sk_test_example",
+      templateId: "otp-template",
+      verificationKey,
+      fetchImpl: (async () =>
+        new Response(JSON.stringify({ success: false }), { status: 202 })) as typeof fetch,
+    });
+
+    await expect(provider.start("+355691234567")).rejects.toMatchObject({
+      publicCode: "verification_provider_unavailable",
+      statusCode: 503,
+    });
+  });
+
+  it("fails closed when Sent times out or cannot be reached", async () => {
+    const provider = new SentDmOtpProvider({
+      apiKey: "sk_test_example",
+      templateId: "otp-template",
+      verificationKey,
+      fetchImpl: (async () => {
+        throw new TypeError("network unavailable");
+      }) as typeof fetch,
+    });
+
+    await expect(provider.start("+355691234567")).rejects.toMatchObject({
+      publicCode: "verification_provider_unavailable",
+      statusCode: 503,
+    });
   });
 });
