@@ -1,19 +1,12 @@
 import type { Metadata } from "next";
 import { isPublicProposalStatus, type ProposalRecord } from "@kuvend/contracts";
 import { KuvendApp } from "../../kuvend-app";
-import { fallbackProposals } from "../../../features/kuvend/fallback-data";
-import { publicProposalPreviews } from "../../seo-data";
-import { extractProposalId, proposalPath, proposalSegment } from "../../proposal-url";
+import { extractProposalId, proposalPath } from "../../proposal-url";
 
 const civicUrl =
   process.env.CIVIC_API_URL ?? process.env.NEXT_PUBLIC_CIVIC_API_URL ?? "http://localhost:4000";
 
-export function generateStaticParams() {
-  return publicProposalPreviews.map((proposal) => ({ id: proposalSegment(proposal) }));
-}
-
 async function getProposal(id: string): Promise<ProposalRecord | undefined> {
-  const local = fallbackProposals.find((proposal) => proposal.id === id);
   try {
     const response = await fetch(`${civicUrl}/v1/proposals/${id}`, { next: { revalidate: 60 } });
     if (response.ok) {
@@ -21,7 +14,7 @@ async function getProposal(id: string): Promise<ProposalRecord | undefined> {
       if (isPublicProposalStatus(proposal.status)) return proposal;
     }
   } catch {}
-  return local && isPublicProposalStatus(local.status) ? local : undefined;
+  return undefined;
 }
 
 export async function generateMetadata({

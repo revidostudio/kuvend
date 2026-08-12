@@ -1,6 +1,5 @@
 import type { MetadataRoute } from "next";
 import { isPublicProposalStatus, type ProposalStatus } from "@kuvend/contracts";
-import { publicProposalPreviews } from "./seo-data";
 import { proposalPath } from "./proposal-url";
 
 const civicUrl =
@@ -13,7 +12,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     opensAt?: string;
     status?: ProposalStatus;
     votingRound?: { opensAt: string };
-  }> = [...publicProposalPreviews];
+  }> = [];
   try {
     const response = await fetch(`${civicUrl}/v1/proposals`, { next: { revalidate: 300 } });
     if (response.ok) proposals = (await response.json()).proposals;

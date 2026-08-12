@@ -68,7 +68,7 @@ export function buildApp(
     ok: true,
     separateTrustDomain: true,
     auditStore: auditStore.kind,
-    authentication: "synthetic-admin-key",
+    authentication: "isolated-admin-key",
   }));
   app.get("/", async (_request, reply) => {
     if (existsSync(clientRoot)) return reply.sendFile("index.html");

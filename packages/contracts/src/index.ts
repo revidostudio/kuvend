@@ -60,6 +60,37 @@ export const evidenceItemSchema = z
 
 export type EvidenceItem = z.infer<typeof evidenceItemSchema>;
 
+const numericStringSchema = z.string().regex(/^\d+$/);
+
+export const membershipSnapshotSchema = z
+  .object({
+    protocol: z.literal("semaphore-v4"),
+    epoch: z.string().trim().min(1).max(80),
+    root: numericStringSchema,
+    memberCount: z.number().int().min(3).max(100_000_000),
+    issuedAt: z.string().datetime(),
+    expiresAt: z.string().datetime(),
+    signature: z.string().regex(/^[A-Za-z0-9_-]{40,}$/),
+  })
+  .strict();
+
+export const anonymousProofSchema = z
+  .object({
+    protocol: z.literal("semaphore-v4"),
+    snapshot: membershipSnapshotSchema,
+    proof: z
+      .object({
+        merkleTreeDepth: z.number().int().min(1).max(32),
+        merkleTreeRoot: numericStringSchema,
+        message: numericStringSchema,
+        nullifier: numericStringSchema,
+        scope: numericStringSchema,
+        points: z.array(numericStringSchema).length(8),
+      })
+      .strict(),
+  })
+  .strict();
+
 export const createProposalSchema = z
   .object({
     title: z.string().trim().min(8).max(140),
@@ -70,7 +101,7 @@ export const createProposalSchema = z
     category: categorySchema,
     evidence: z.array(evidenceItemSchema).max(8).default([]),
     publicAuthorName: z.string().trim().min(2).max(80).optional(),
-    credential: z.string().min(20),
+    credentialProof: anonymousProofSchema,
     authorCapabilityHash: z.string().regex(/^[a-f0-9]{64}$/),
   })
   .strict();
@@ -82,8 +113,7 @@ export const createArgumentSchema = z
     body: z.string().trim().min(8).max(700),
     evidence: z.array(evidenceItemSchema).max(3).default([]),
     publicAuthorName: z.string().trim().min(2).max(80).optional(),
-    credential: z.string().min(20),
-    contributionNullifier: z.string().regex(/^[a-f0-9]{64}$/),
+    credentialProof: anonymousProofSchema,
   })
   .strict();
 
@@ -92,8 +122,7 @@ export const castBallotSchema = z
     proposalId: z.string().uuid(),
     roundId: z.string().uuid(),
     choice: voteChoiceSchema,
-    credential: z.string().min(20),
-    nullifier: z.string().regex(/^[a-f0-9]{64}$/),
+    credentialProof: anonymousProofSchema,
     receiptCommitment: z.string().regex(/^[a-f0-9]{64}$/),
   })
   .strict();
@@ -113,6 +142,7 @@ export const otpStartSchema = z
       .string()
       .trim()
       .regex(/^\+[1-9]\d{7,14}$/),
+    identityCommitment: numericStringSchema,
   })
   .strict();
 
@@ -124,6 +154,7 @@ export const otpCheckSchema = z
       .trim()
       .regex(/^\+[1-9]\d{7,14}$/),
     code: z.string().regex(/^\d{6}$/),
+    identityCommitment: numericStringSchema,
   })
   .strict();
 

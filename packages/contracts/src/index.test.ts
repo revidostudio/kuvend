@@ -8,6 +8,27 @@ import {
   publicProposalStatuses,
 } from "./index.js";
 
+const credentialProof = {
+  protocol: "semaphore-v4",
+  snapshot: {
+    protocol: "semaphore-v4",
+    epoch: "test",
+    root: "4",
+    memberCount: 3,
+    issuedAt: "2026-08-11T00:00:00.000Z",
+    expiresAt: "2027-08-11T00:00:00.000Z",
+    signature: "a".repeat(64),
+  },
+  proof: {
+    merkleTreeDepth: 1,
+    merkleTreeRoot: "4",
+    message: "1",
+    nullifier: "5",
+    scope: "6",
+    points: Array(8).fill("7"),
+  },
+};
+
 const baseProposal = {
   title: "Ndriçim më i mirë pranë shkollave",
   problem: "Rrugët pranë shkollave janë të errëta dhe të pasigurta për fëmijët.",
@@ -16,7 +37,7 @@ const baseProposal = {
   location: "Tiranë",
   category: "community",
   evidence: [],
-  credential: "synthetic.credential.value",
+  credentialProof,
   authorCapabilityHash: "a".repeat(64),
 };
 
@@ -44,8 +65,7 @@ describe("privacy-boundary contracts", () => {
       proposalId: crypto.randomUUID(),
       roundId: crypto.randomUUID(),
       choice: "support",
-      credential: "synthetic.credential.value",
-      nullifier: "b".repeat(64),
+      credentialProof,
       receiptCommitment: "c".repeat(64),
       userId: "stable-user",
     });
@@ -59,8 +79,7 @@ describe("privacy-boundary contracts", () => {
       body: "Ky argument shpjegon qartë një arsye publike.",
       evidence: [],
       publicAuthorName: "Arta",
-      credential: "synthetic.credential.value",
-      contributionNullifier: "d".repeat(64),
+      credentialProof,
     };
     expect(createArgumentSchema.safeParse(baseArgument).success).toBe(true);
     expect(

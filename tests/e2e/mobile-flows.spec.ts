@@ -1,20 +1,179 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { Group } from "@semaphore-protocol/group";
+import { Identity } from "@semaphore-protocol/identity";
+
+function membershipSnapshot(identityCommitment: string) {
+  const members = [
+    identityCommitment,
+    new Identity().commitment.toString(),
+    new Identity().commitment.toString(),
+  ].sort((a, b) => (BigInt(a) < BigInt(b) ? -1 : 1));
+  const group = new Group(members.map(BigInt));
+  return {
+    protocol: "semaphore-v4",
+    epoch: "e2e",
+    members,
+    root: group.root.toString(),
+    issuedAt: new Date().toISOString(),
+    expiresAt: new Date(Date.now() + 5 * 60_000).toISOString(),
+    signature: "a".repeat(64),
+  };
+}
+
+const testProposals = [
+  {
+    id: "11111111-1111-4111-8111-111111111111",
+    title: "Më shumë hije në stacionet e autobusëve",
+    summary: "Stacionet pa hije i ekspozojnë udhëtarët ndaj vapës së verës.",
+    problem: "Shumë stacione autobusi nuk kanë strehë ose hije për udhëtarët.",
+    proposedChange: "Bashkitë të vendosin strehë, hije dhe ulëse në stacionet më të përdorura.",
+    scope: "national",
+    category: "transport",
+    evidence: [],
+    pseudonym: "Lisi i Qetë",
+    status: "voting_open",
+    revisionNumber: 1,
+    votingRound: {
+      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      opensAt: "2026-08-01T09:00:00.000Z",
+      closesAt: "2026-08-15T09:00:00.000Z",
+      turnout: 0,
+    },
+    arguments: [
+      {
+        id: "a1",
+        position: "for",
+        body: "E bën transportin më njerëzor.",
+        evidence: [],
+        pseudonym: "Ura e Hapur",
+        createdAt: "2026-08-02T10:00:00.000Z",
+      },
+      {
+        id: "a2",
+        position: "against",
+        body: "Duhet qartësuar mirëmbajtja.",
+        evidence: [],
+        pseudonym: "Guri i Bardhë",
+        createdAt: "2026-08-03T10:00:00.000Z",
+      },
+      {
+        id: "a3",
+        position: "for",
+        body: "Ndihmon të moshuarit dhe fëmijët.",
+        evidence: [],
+        pseudonym: "Bredhi i Gjelbër",
+        createdAt: "2026-08-04T10:00:00.000Z",
+      },
+      {
+        id: "a4",
+        position: "against",
+        body: "Duhet publikuar kostoja.",
+        evidence: [],
+        pseudonym: "Mali i Hapur",
+        createdAt: "2026-08-05T10:00:00.000Z",
+      },
+    ],
+    statusHistory: [
+      { status: "pending_review", at: "2026-07-27T09:00:00.000Z", note: "U dorëzua." },
+      {
+        status: "pending_review",
+        at: "2026-07-28T09:00:00.000Z",
+        note: "U kontrollua privatësia.",
+      },
+      {
+        status: "pending_review",
+        at: "2026-07-29T09:00:00.000Z",
+        note: "U kontrollua fusha.",
+      },
+      {
+        status: "pending_review",
+        at: "2026-07-30T09:00:00.000Z",
+        note: "U përmirësua versioni.",
+      },
+      {
+        status: "pending_review",
+        at: "2026-07-31T09:00:00.000Z",
+        note: "U konfirmua vendimi.",
+      },
+      { status: "voting_open", at: "2026-08-01T09:00:00.000Z", note: "Kaloi moderimin." },
+    ],
+  },
+  {
+    id: "22222222-2222-4222-8222-222222222222",
+    title: "Kontratat publike në format të hapur",
+    summary: "Kontratat duhet të jenë të kërkueshme dhe të ripërdorshme.",
+    problem: "Dokumentet publike nuk kërkohen lehtë.",
+    proposedChange: "Kontratat të publikohen si të dhëna të strukturuara.",
+    scope: "national",
+    category: "governance",
+    evidence: [],
+    pseudonym: "Fjala e Lirë",
+    status: "voting_closed",
+    revisionNumber: 1,
+    votingRound: {
+      id: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      opensAt: "2026-07-01T09:00:00.000Z",
+      closesAt: "2026-07-15T09:00:00.000Z",
+      turnout: 312,
+    },
+    closedResult: {
+      turnout: 312,
+      support: 240,
+      oppose: 72,
+      closedAt: "2026-07-15T09:00:00.000Z",
+    },
+    arguments: [],
+    statusHistory: [
+      { status: "voting_closed", at: "2026-07-15T09:00:00.000Z", note: "Votimi u mbyll." },
+    ],
+  },
+  {
+    id: "33333333-3333-4333-8333-333333333333",
+    title: "Kalime më të sigurta pranë shkollave",
+    summary: "Sinjalistikë dhe ndriçim më i mirë në zonat me fëmijë.",
+    problem: "Hyrjet e shkollave nuk kanë kalime të dukshme.",
+    proposedChange: "Auditim sigurie dhe ndërhyrje pranë çdo shkolle.",
+    scope: "national",
+    category: "community",
+    evidence: [],
+    pseudonym: "Drita e Mëngjesit",
+    status: "voting_open",
+    revisionNumber: 1,
+    votingRound: {
+      id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      opensAt: "2026-08-01T09:00:00.000Z",
+      closesAt: "2026-08-15T09:00:00.000Z",
+      turnout: 0,
+    },
+    arguments: [],
+    statusHistory: [
+      { status: "voting_open", at: "2026-08-01T09:00:00.000Z", note: "Kaloi moderimin." },
+    ],
+  },
+];
 
 test.beforeEach(async ({ page }) => {
+  let identityCommitment = "";
   await page.route("**/health", (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
       body: JSON.stringify({
         ok: true,
-        otpProvider: "synthetic",
+        otpProvider: "sentdm",
+        credentialProtocol: "semaphore-v4",
         participationOpen: true,
       }),
     }),
   );
   await page.route("**/v1/proposals", async (route) => {
-    if (route.request().method() === "GET") return route.abort();
+    if (route.request().method() === "GET")
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ proposals: testProposals }),
+      });
     const draft = route.request().postDataJSON() as Record<string, unknown>;
     await route.fulfill({
       status: 201,
@@ -39,18 +198,23 @@ test.beforeEach(async ({ page }) => {
       }),
     });
   });
-  await page.route("**/v1/otp/start", (route) =>
-    route.fulfill({
+  await page.route("**/v1/otp/start", (route) => {
+    identityCommitment = String(route.request().postDataJSON().identityCommitment);
+    return route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ challengeId: "mobile-challenge", otpProvider: "synthetic" }),
-    }),
-  );
+      body: JSON.stringify({ challengeId: "mobile-challenge", otpProvider: "sentdm" }),
+    });
+  });
   await page.route("**/v1/otp/check", (route) =>
     route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ credential: "mobile-synthetic-credential" }),
+      body: JSON.stringify({
+        credentialProtocol: "semaphore-v4",
+        snapshot: membershipSnapshot(identityCommitment),
+        membershipExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60_000).toISOString(),
+      }),
     }),
   );
 });
@@ -65,7 +229,7 @@ test("production fails closed and discards a stale credential when verification 
       contentType: "application/json",
       body: JSON.stringify({
         ok: true,
-        otpProvider: "synthetic",
+        otpProvider: "sentdm",
         participationOpen: false,
       }),
     }),
@@ -78,7 +242,7 @@ test("production fails closed and discards a stale credential when verification 
     });
   });
   await page.addInitScript(() => {
-    localStorage.setItem("kuvend.credential.v1", "stale-synthetic-credential");
+    localStorage.setItem("kuvend.credential.v2", JSON.stringify({ protocol: "semaphore-v4" }));
   });
 
   await page.goto("/");
@@ -86,7 +250,7 @@ test("production fails closed and discards a stale credential when verification 
   await expect(page.getByText("Votimi është përkohësisht i pezulluar")).toBeVisible();
   await expect(page.getByRole("button", { name: "Mbështes" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Kundërshtoj" })).toBeDisabled();
-  expect(await page.evaluate(() => localStorage.getItem("kuvend.credential.v1"))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem("kuvend.credential.v2"))).toBeNull();
   expect(ballotRequests).toBe(0);
 });
 
@@ -245,11 +409,7 @@ test("mobile vote completes OTP, final confirmation, result and receipt", async 
   let otpStartPayload: Record<string, unknown> | undefined;
   await page.route("**/v1/otp/start", async (route) => {
     otpStartPayload = route.request().postDataJSON() as Record<string, unknown>;
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ challengeId: "mobile-challenge", otpProvider: "synthetic" }),
-    });
+    await route.fallback();
   });
   await page.route("**/v1/ballots", async (route) => {
     ballotPayload = route.request().postDataJSON() as Record<string, unknown>;
@@ -285,10 +445,11 @@ test("mobile vote completes OTP, final confirmation, result and receipt", async 
   await expect(page.getByText(/Mandati kontrollon përfshirjen/)).toBeVisible();
   expect(ballotPayload).toMatchObject({
     choice: "support",
-    credential: "mobile-synthetic-credential",
+    credentialProof: { protocol: "semaphore-v4" },
   });
   expect(JSON.stringify(ballotPayload)).not.toMatch(/phone|\+355/);
-  expect(otpStartPayload).toEqual({ phone: "+355691234567" });
+  expect(otpStartPayload).toMatchObject({ phone: "+355691234567" });
+  expect(String(otpStartPayload?.identityCommitment)).toMatch(/^\d+$/);
 });
 
 test("country hint is ephemeral and the full country list is searchable", async ({
@@ -424,10 +585,10 @@ test("mobile argument keeps its evidence across OTP and publishes without identi
   await expect(page.getByText("Po publikon si")).toBeVisible();
   await expect(page.getByText("Arta Testuese")).toBeVisible();
   await page.getByRole("button", { name: "Publiko argumentin" }).click();
-  await expect(page.getByText("Arta Testuese")).toBeVisible();
+  await expect.poll(() => argumentPayload).toBeDefined();
   expect(argumentPayload).toMatchObject({
     position: "against",
-    credential: "mobile-synthetic-credential",
+    credentialProof: { protocol: "semaphore-v4" },
     publicAuthorName: "Arta Testuese",
     evidence: [
       {

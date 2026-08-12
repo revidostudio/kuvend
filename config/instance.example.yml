@@ -1,6 +1,6 @@
 instance:
   id: albania-demo
-  name: Kuvend (Synthetic Demo)
+  name: Kuvend
   country: AL
   languages:
     - sq
@@ -12,10 +12,10 @@ participation:
   eligibility: verified_international_phone_control
   credential_epoch_days: 30
   proposals:
-    credential: synthetic_single_use
+    credential: semaphore_v4_membership
     fixed_quota: disabled
   voting:
-    credential: synthetic_topic_scoped
+    credential: semaphore_v4_scoped_nullifier
     duration_days: 14
     final_after_confirmation: true
     live_turnout: true

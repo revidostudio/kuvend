@@ -14,11 +14,11 @@ export default function TrustCenterPage() {
       lead="Mos na beso vetëm nga fjalët. Këtu shpjegojmë kush e ndërton Kuvend, çfarë merr çdo shërbim dhe çfarë nuk është ende gati për pjesëmarrje sensitive."
     >
       <div className="trust-status" role="status">
-        <strong>Statusi aktual: beta sintetike</strong>
+        <strong>Statusi aktual: beta eksperimentale me pjesëmarrje reale</strong>
         <p>
-          Propozimet dhe dëshmitë e demonstrimit nuk janë një votim kombëtar real. Verifikimi i
-          prodhimit dhe pretendimi i plotë i privatësisë mbeten të bllokuara deri te operatori dhe
-          auditimi i pavarur.
+          WhatsApp verifikon kontrollin e numrit dhe Semaphore fsheh anëtarin që vepron. Rezultatet
+          janë këshilluese, jo përfaqësuese. Pretendimet më të forta të anonimitetit presin operator
+          dhe auditim të pavarur.
         </p>
       </div>
       <div className="trust-directory">
