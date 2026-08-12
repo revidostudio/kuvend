@@ -520,6 +520,17 @@ test("mobile proposal wizard can skip AI, verify, submit and show recovery secre
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: "Konfirmo dhe dorëzo" }).click();
 
+  await expect(page.getByText("Puna jote është ruajtur në këtë pajisje")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Kthehu te propozimi" })).toBeVisible();
+  await page.getByRole("button", { name: "Kthehu te propozimi" }).click();
+  await expect(page.getByRole("heading", { name: "Konfirmo propozimin" })).toBeVisible();
+  await expect(page.getByText("Më shumë pemë në lagje", { exact: true })).toBeVisible();
+  await page.reload();
+  await page.getByRole("button", { name: "Propozo" }).click();
+  await expect(page.getByRole("heading", { name: "Konfirmo propozimin" })).toBeVisible();
+  await expect(page.getByText("Më shumë pemë në lagje", { exact: true })).toBeVisible();
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Konfirmo dhe dorëzo" }).click();
   await completeOtp(page);
   await expect(page.getByRole("heading", { name: "Konfirmo propozimin" })).toBeVisible();
   await page.getByRole("checkbox").check();
